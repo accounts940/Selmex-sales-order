@@ -112,6 +112,7 @@ tr:last-child td{border-bottom:0}td.n{text-align:right}td select{min-width:130px
 .ln{display:flex;justify-content:space-between;gap:14px;padding:2px 0}.ln b{white-space:nowrap;color:var(--blue)}
 .sec.late{border-left:4px solid var(--red)}.sec.ok{border-left:4px solid var(--ok)}
 .kpi[data-go]{cursor:pointer}
+.irow select{width:100%;min-width:96px}
 </style>
 </head>
 <body>
@@ -151,7 +152,7 @@ tr:last-child td{border-bottom:0}td.n{text-align:right}td select{min-width:130px
 
     <section id="orders" class="hide">
       <div class="bar">
-        <div class="srch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="q" placeholder="Search PO ID, company, employee or item" aria-label="Search orders"></div>
+        <div class="srch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="q" placeholder="Search PO ID, company, sales person or item" aria-label="Search orders"></div>
         <div class="chips" id="chips"><button class="on" data-s="">All</button><button data-s="Pending">Pending</button><button data-s="In Production">In Production</button><button data-s="Completed">Completed</button></div>
       </div>
       <div id="olist"></div>
@@ -163,14 +164,14 @@ tr:last-child td{border-bottom:0}td.n{text-align:right}td select{min-width:130px
         <div class="grid f">
           <div><label for="po">PO ID / code</label><input id="po"></div>
           <div><label for="co">Company name</label><input id="co"></div>
-          <div><label for="emp">Assigned employee</label><select id="emp"></select></div>
+          <div><label for="emp">Sales person</label><select id="emp"></select></div>
           <div><label for="od">Order date</label><input id="od" type="date"></div>
           <div><label for="dd">Delivery date</label><input id="dd" type="date"></div>
         </div>
       </div>
       <div class="panel">
         <h2>Items</h2>
-        <div class="scroll"><table><thead><tr><th>Item description</th><th>Micron (in words)</th><th>Size</th><th>Quantity</th><th></th></tr></thead><tbody id="irows"></tbody></table></div>
+        <div class="scroll"><table><thead><tr><th>Item description</th><th>Micron (in words)</th><th>Size</th><th>Quantity</th><th>Unit</th><th></th></tr></thead><tbody id="irows"></tbody></table></div>
         <p><button class="alt" id="addrow" type="button">Add item</button></p>
       </div>
       <button id="save">Save order</button>
@@ -260,7 +261,7 @@ function secTable(list) {
   if (!list.length) return '<p class="empty">None</p>';
   return `<div class="scroll"><table class="ot"><thead><tr><th>Order</th><th>Company</th><th>Items &amp; quantity</th><th>Delivery</th><th>Status</th></tr></thead><tbody>` +
     list.map(o => {
-      const ln = items.filter(i => i.order_id === o.id).map(i => `<div class="ln"><span>${esc(i.item_description)}${i.micron ? " · " + esc(i.micron) : ""}${i.size ? " · " + esc(i.size) : ""}</span><b>${esc(i.quantity)}</b></div>`).join("");
+      const ln = items.filter(i => i.order_id === o.id).map(i => `<div class="ln"><span>${esc(i.item_description)}${i.micron ? " · " + esc(i.micron) : ""}${i.size ? " · " + esc(i.size) : ""}</span><b>${esc(i.quantity)} ${esc(i.unit || "")}</b></div>`).join("");
       return `<tr><td><b>${esc(o.po_id)}</b><br><small>${esc(o.assigned_employee)} · ${fmt(o.order_date)}</small></td><td>${esc(o.company_name)}</td><td>${ln || "-"}</td><td>${fmt(o.delivery_date)}</td><td>${badge(o.status)}</td></tr>`;
     }).join("") + `</tbody></table></div>`;
 }
@@ -292,7 +293,7 @@ function renderOrders() {
 function card(o) {
   const its = items.filter(i => i.order_id === o.id), done = its.filter(i => i.item_status === "Done").length;
   const pct = its.length ? Math.round(done * 100 / its.length) : 0;
-  const rows = its.map(i => `<tr><td>${esc(i.item_description)}</td><td>${esc(i.micron)}</td><td>${esc(i.size)}</td><td class="n">${esc(i.quantity)}</td><td>` +
+  const rows = its.map(i => `<tr><td>${esc(i.item_description)}</td><td>${esc(i.micron)}</td><td>${esc(i.size)}</td><td class="n">${esc(i.quantity)} ${esc(i.unit || "")}</td><td>` +
     (canUpd() ? `<select data-item="${i.id}" aria-label="Item status">${ISTAT.map(s => `<option${s === i.item_status ? " selected" : ""}>${s}</option>`).join("")}</select>` : badge(i.item_status)) + `</td></tr>`).join("");
   return `<details class="card" data-o="${o.id}"${openSet.has(o.id) ? " open" : ""}><summary>` +
     `<div class="ph"><strong>${esc(o.po_id)}</strong><span>${esc(o.company_name)}</span></div>` +
@@ -341,7 +342,7 @@ $("olist").onchange = async e => {
 // ---- new order ----
 function addRow() {
   const tr = document.createElement("tr"); tr.className = "irow";
-  tr.innerHTML = `<td><input class="d" aria-label="Item description"></td><td><input class="m" placeholder="e.g. Fifty" aria-label="Micron"></td><td><input class="s" placeholder="48mm x 65m" aria-label="Size"></td><td><input class="q" type="number" min="0" step="any" aria-label="Quantity"></td><td><button type="button" class="alt" aria-label="Remove item">Remove</button></td>`;
+  tr.innerHTML = `<td><input class="d" aria-label="Item description"></td><td><input class="m" placeholder="e.g. Fifty" aria-label="Micron"></td><td><input class="s" placeholder="48mm x 65m" aria-label="Size"></td><td><input class="q" type="number" min="0" step="any" aria-label="Quantity"></td><td><select class="u" aria-label="Unit"><option>Boxes</option><option>Pcs</option><option>Rolls</option><option>Cartons</option><option>Bundles</option><option>Kg</option><option>Meters</option></select></td><td><button type="button" class="alt" aria-label="Remove item">Remove</button></td>`;
   tr.querySelector("button").onclick = () => { if ($("irows").children.length > 1) tr.remove(); };
   $("irows").appendChild(tr);
 }
@@ -351,7 +352,7 @@ $("save").onclick = async () => {
   const po = $("po").value.trim(), co = $("co").value.trim();
   const rows = [...document.querySelectorAll(".irow")].map(r => ({
     item_description: r.querySelector(".d").value.trim(), micron: r.querySelector(".m").value.trim(),
-    size: r.querySelector(".s").value.trim(), quantity: r.querySelector(".q").value
+    size: r.querySelector(".s").value.trim(), quantity: r.querySelector(".q").value, unit: r.querySelector(".u").value
   })).filter(r => r.item_description || r.quantity);
   if (!po || !co || !$("od").value) { msg.textContent = "Enter the PO ID, company name and order date."; return; }
   if (!rows.length || rows.some(r => !r.item_description || !(Number(r.quantity) > 0))) { msg.textContent = "Each item needs a description and a quantity above 0."; return; }
@@ -361,7 +362,9 @@ $("save").onclick = async () => {
     order_date: $("od").value, delivery_date: $("dd").value || null
   }).select().single();
   if (error) { msg.textContent = "Order not saved: " + error.message; $("save").disabled = false; return; }
-  const r2 = await db.from("order_items").insert(rows.map(r => ({ ...r, quantity: Number(r.quantity), order_id: o.id })));
+  const mk = u => rows.map(r => { const x = { ...r, quantity: Number(r.quantity), order_id: o.id }; if (!u) delete x.unit; return x; });
+  let r2 = await db.from("order_items").insert(mk(true));
+  if (r2.error) r2 = await db.from("order_items").insert(mk(false));
   if (r2.error) { msg.textContent = "Order saved but items failed: " + r2.error.message + ". Ask Management to delete order " + po + " and enter it again."; $("save").disabled = false; await load(); return; }
   await db.from("activity_log").insert({ order_id: o.id, action: "Order created", done_by: me.name });
   $("po").value = ""; $("co").value = ""; $("dd").value = ""; $("irows").innerHTML = ""; addRow(); addRow();
