@@ -108,6 +108,10 @@ tr:last-child td{border-bottom:0}td.n{text-align:right}td select{min-width:130px
 .msg{color:var(--red);min-height:20px;margin-top:10px}
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 20px;border-radius:12px;opacity:0;pointer-events:none;transition:opacity .2s;box-shadow:var(--sh);z-index:50}
 #toast.show{opacity:1}
+.ot td{vertical-align:top}.ot small{color:var(--mut)}
+.ln{display:flex;justify-content:space-between;gap:14px;padding:2px 0}.ln b{white-space:nowrap;color:var(--blue)}
+.sec.late{border-left:4px solid var(--red)}.sec.ok{border-left:4px solid var(--ok)}
+.kpi[data-go]{cursor:pointer}
 </style>
 </head>
 <body>
@@ -142,9 +146,7 @@ tr:last-child td{border-bottom:0}td.n{text-align:right}td select{min-width:130px
     <section id="dash">
       <p class="hello" id="hello"></p>
       <div class="kpis" id="kpis"></div>
-      <div class="panel"><h2>Order status mix</h2><div class="mix" id="mix"></div>
-        <div class="legend"><span><i class="s0"></i>Pending</span><span><i class="s1"></i>In production</span><span><i class="s2"></i>Completed</span></div></div>
-      <div class="panel"><h2>Open orders by delivery date</h2><div id="pend"></div></div>
+      <div id="secs"></div>
     </section>
 
     <section id="orders" class="hide">
@@ -254,15 +256,30 @@ const IC = {
 const ico = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>`;
 let fstat = "", openSet = new Set();
 
+function secTable(list) {
+  if (!list.length) return '<p class="empty">None</p>';
+  return `<div class="scroll"><table class="ot"><thead><tr><th>Order</th><th>Company</th><th>Items &amp; quantity</th><th>Delivery</th><th>Status</th></tr></thead><tbody>` +
+    list.map(o => {
+      const ln = items.filter(i => i.order_id === o.id).map(i => `<div class="ln"><span>${esc(i.item_description)}${i.micron ? " · " + esc(i.micron) : ""}${i.size ? " · " + esc(i.size) : ""}</span><b>${esc(i.quantity)}</b></div>`).join("");
+      return `<tr><td><b>${esc(o.po_id)}</b><br><small>${esc(o.assigned_employee)} · ${fmt(o.order_date)}</small></td><td>${esc(o.company_name)}</td><td>${ln || "-"}</td><td>${fmt(o.delivery_date)}</td><td>${badge(o.status)}</td></tr>`;
+    }).join("") + `</tbody></table></div>`;
+}
 function renderDash() {
-  const h = new Date().getHours(), g = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+  const h = new Date().getHours(), g = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening", t = today();
   $("hello").innerHTML = `${g}, <b>${esc(me.name.split(" ")[0])}</b>`;
   const n = s => orders.filter(o => o.status === s).length;
-  const K = [["box","Total orders",orders.length,"k1"],["clock","Pending",n("Pending"),"k2"],["play","In production",n("In Production"),"k3"],["check","Completed",n("Completed"),"k4"],["alert","Overdue",orders.filter(isLate).length,"k5"]];
-  $("kpis").innerHTML = K.map(k => `<div class="kpi ${k[3]}"><i>${ico(k[0])}</i><div><b>${k[2]}</b><small>${k[1]}</small></div></div>`).join("");
-  $("mix").innerHTML = ["Pending","In Production","Completed"].map((s, i) => `<span class="s${i}" style="flex:${n(s)}" title="${s}: ${n(s)}"></span>`).join("");
-  const open = orders.filter(o => o.status !== "Completed").sort((a, b) => (a.delivery_date || "9999").localeCompare(b.delivery_date || "9999"));
-  $("pend").innerHTML = open.length ? open.map(o => `<div class="row${isLate(o) ? " late" : ""}"><div class="dt"><b>${fmt(o.delivery_date)}</b>${isLate(o) ? "<em>Overdue</em>" : ""}</div><div class="mn"><strong>${esc(o.po_id)}</strong><span>${esc(o.company_name)}</span></div><span class="who">${esc(o.assigned_employee)}</span>${badge(o.status)}</div>`).join("") : '<p class="empty">No open orders right now. Add one from the New order tab.</p>';
+  const byDate = (a, b) => (a.delivery_date || "9999").localeCompare(b.delivery_date || "9999");
+  const open = orders.filter(o => o.status !== "Completed").sort(byDate);
+  const overdue = open.filter(o => o.delivery_date && o.delivery_date < t);
+  const due = open.filter(o => o.delivery_date === t);
+  const soon = open.filter(o => o.delivery_date && o.delivery_date > t);
+  const nodate = open.filter(o => !o.delivery_date);
+  const done2 = orders.filter(o => o.status === "Completed" && Date.now() - new Date(o.completed_at || o.created_at) < 2 * 864e5)
+    .sort((a, b) => new Date(b.completed_at || b.created_at) - new Date(a.completed_at || a.created_at));
+  const K = [["box","Orders placed today",orders.filter(o => o.order_date === t).length,"k1",""],["clock","Pending",n("Pending"),"k2",""],["play","In production",n("In Production"),"k3",""],["check","Completed (all time)",n("Completed"),"k4","Completed"],["alert","Overdue",overdue.length,"k5",""]];
+  $("kpis").innerHTML = K.map(k => `<div class="kpi ${k[3]}"${k[4] ? ` data-go="${k[4]}" title="Open the full completed list"` : ""}><i>${ico(k[0])}</i><div><b>${k[2]}</b><small>${k[1]}</small></div></div>`).join("");
+  const P = [["Overdue", overdue, "late"], ["Due today", due, ""], ["Upcoming", soon, ""], ["No delivery date", nodate, ""], ["Completed in the last 2 days", done2, "ok"]];
+  $("secs").innerHTML = P.map(p => `<div class="panel sec ${p[2]}"><h2>${p[0]} (${p[1].length})</h2>${secTable(p[1])}</div>`).join("");
 }
 
 function renderOrders() {
@@ -285,6 +302,12 @@ function card(o) {
     `<div class="scroll"><table><thead><tr><th>Item</th><th>Micron</th><th>Size</th><th>Qty</th><th>Status</th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="empty">No items</td></tr>'}</tbody></table></div></details>`;
 }
 $("q").oninput = renderOrders;
+$("kpis").onclick = e => {
+  const k = e.target.closest("[data-go]"); if (!k) return;
+  fstat = k.dataset.go;
+  document.querySelectorAll("#chips button").forEach(x => x.classList.toggle("on", x.dataset.s === fstat));
+  renderOrders(); show("orders");
+};
 $("chips").onclick = e => {
   const b = e.target.closest("button[data-s]"); if (!b) return;
   fstat = b.dataset.s;
@@ -306,8 +329,10 @@ $("olist").onchange = async e => {
   const os = all.every(x => x.item_status === "Done") ? "Completed" : all.some(x => x.item_status !== "Pending") ? "In Production" : "Pending";
   const o = orders.find(x => x.id === it.order_id);
   if (o.status !== os) {
-    const r = await db.from("orders").update({ status: os }).eq("id", o.id);
-    if (!r.error) o.status = os;
+    const upd = { status: os, completed_at: os === "Completed" ? new Date().toISOString() : null };
+    let r = await db.from("orders").update(upd).eq("id", o.id);
+    if (r.error) { upd.completed_at = undefined; r = await db.from("orders").update({ status: os }).eq("id", o.id); }
+    if (!r.error) { o.status = os; o.completed_at = upd.completed_at || null; }
   }
   await db.from("activity_log").insert({ order_id: o.id, action: `${it.item_description} marked ${status}`, done_by: me.name });
   toast("Saved"); renderDash(); renderOrders();
