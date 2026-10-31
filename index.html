@@ -119,6 +119,15 @@ tr:last-child td{border-bottom:0}td.n{text-align:right}td select{min-width:130px
 @media(max-width:1000px){.split.has{display:block}.rcol{position:static}}
 .drop{border:2px dashed #c9ccf0;border-radius:14px;padding:18px;text-align:center;background:#fafaff;transition:background .15s,border-color .15s}
 .drop.over{background:#eef0ff;border-color:var(--blue2)}
+.drop{cursor:pointer;padding:22px 18px}
+.drop:hover,.drop:focus-visible{background:#f3f4ff;border-color:var(--blue2);outline:none}
+.drop .dicon{font-size:30px;line-height:1}
+.drop .dtitle{font-size:17px;font-weight:700;color:var(--ink,#1b1f3b);margin:6px 0 2px}
+.drop .dsub{font-size:13px}
+.drop kbd{background:#fff;border:1px solid #c9ccf0;border-bottom-width:2px;border-radius:5px;padding:1px 6px;font:600 12px/1.4 inherit}
+#dropveil{position:fixed;inset:0;z-index:100;background:#1d2a8fcc;color:#fff;display:none;align-items:center;justify-content:center;flex-direction:column;gap:8px;font-size:26px;font-weight:700;pointer-events:none}
+#dropveil small{font-size:15px;font-weight:500;opacity:.9}
+#dropveil.on{display:flex}
 .drop p{margin:4px 0;color:var(--mut)}
 .dbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:10px 0}
 .upstat{margin-top:12px;padding:10px 14px;border-radius:12px;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -129,9 +138,35 @@ tr:last-child td{border-bottom:0}td.n{text-align:right}td select{min-width:130px
 @keyframes sp{to{transform:rotate(360deg)}}
 .warn{background:#fff8e6!important;border-color:#e0b04a!important}
 .acts{display:flex;gap:8px}
+
+html{scroll-behavior:smooth}
+.panel,.kpi,.chips button,nav button{transition:transform .2s,box-shadow .2s,background .2s,color .2s,border-color .2s}
+.panel:hover{box-shadow:0 2px 4px #1b1f4a10,0 14px 32px #1b1f4a1c}
+nav button:hover:not(.on){transform:translateY(-1px);border-color:#c9ccf0;color:var(--blue)}
+.chips button:hover:not(.on){border-color:#c9ccf0;color:var(--blue)}
+.fbar{align-items:flex-end}
+.ff label{display:block;font-size:12px;font-weight:600;color:var(--mut);margin-bottom:4px}
+.ff select,.ff input{min-width:170px}
+.cnt{margin-left:auto;color:var(--mut);font-size:13px}
+.scroll.tw{border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:var(--sh);margin-bottom:14px}
+.panel .scroll.tw{box-shadow:none}
+table.og{border-collapse:separate;border-spacing:0;min-width:980px}
+.og thead th{background:#f8f9ff;position:sticky;top:0;z-index:1;white-space:nowrap;border-bottom:1px solid var(--line)}
+.og td{vertical-align:top;border-bottom:1px solid var(--line);transition:background .15s}
+.og tbody:last-child tr:last-child td{border-bottom:0}
+.og tbody tr:last-child td{border-bottom:2px solid #e0e3f5}
+.og tbody:hover td{background:#f5f6ff}
+.og tbody{animation:rowin .4s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0)*40ms)}
+@keyframes rowin{from{opacity:0;transform:translateY(12px)}}
+.oc b{display:block;color:var(--blue);white-space:nowrap}.oc small{color:var(--mut)}
+.og td.q{white-space:nowrap;font-weight:600;text-align:right}
+.og .b.late{margin-top:4px}
+.og td select{min-width:120px}
+.ghead{animation:in .3s ease both}
 </style>
 </head>
 <body>
+<div id="dropveil"><div>&#128206; Drop the file to read it</div><small>PDF, JPG or PNG</small></div>
 
 <section id="login">
   <div class="lbrand"><div class="lcard"><img class="logo big" alt="Selmex"></div>
@@ -172,6 +207,12 @@ tr:last-child td{border-bottom:0}td.n{text-align:right}td select{min-width:130px
         <div class="srch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="q" placeholder="Search PO ID, company, sales person or item" aria-label="Search orders"></div>
         <div class="chips" id="chips"><button class="on" data-s="">All</button><button data-s="Pending">Pending</button><button data-s="In Production">In Production</button><button data-s="Completed">Completed</button><button data-s="Dispatched">Dispatched</button></div>
       </div>
+      <div class="bar fbar">
+        <div class="ff"><label for="fsp">Salesperson</label><select id="fsp"><option value="">All</option></select></div>
+        <div class="ff"><label for="fdt">Expected delivery</label><input type="date" id="fdt"></div>
+        <button class="alt sm" id="fclear" type="button">Clear filters</button>
+        <span class="cnt" id="ocount"></span>
+      </div>
       <div id="olist"></div>
     </section>
 
@@ -180,8 +221,10 @@ tr:last-child td{border-bottom:0}td.n{text-align:right}td select{min-width:130px
         <div class="lcol">
           <div class="panel" id="uppanel">
             <h2>Upload a PO, invoice or order photo</h2>
-            <div class="drop" id="drop">
-              <p>Drop a file here, or</p>
+            <div class="drop" id="drop" tabindex="0" role="button" aria-label="Upload a PO. Click, drop a file, or paste with Ctrl+V">
+              <div class="dicon">&#128206;</div>
+              <p class="dtitle">Drop your PO here</p>
+              <p class="dsub">or click to browse &middot; or press <kbd>Ctrl</kbd> + <kbd>V</kbd> to paste a screenshot, image or PDF</p>
               <div class="dbtns"><button class="alt" id="pick" type="button">Choose file</button><button class="alt" id="snap" type="button">Take photo</button></div>
               <p class="hint">PDF, JPG or PNG. The party, items, size, quantity and unit are read automatically and filled into the form below. Check every field before saving. The file is only used to read the details. It is never saved.</p>
               <input id="fpick" type="file" accept="image/*,application/pdf" class="hide">
@@ -323,13 +366,30 @@ const IC = {
 const ico = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>`;
 let fstat = "", openSet = new Set();
 
-function secTable(list) {
+function ordTable(list, full) {
   if (!list.length) return '<p class="empty">None</p>';
-  return `<div class="scroll"><table class="ot"><thead><tr><th>Order</th><th>Company</th><th>Items &amp; quantity</th><th>Delivery</th><th>Status</th></tr></thead><tbody>` +
-    list.map(o => {
-      const ln = items.filter(i => i.order_id === o.id).map(i => `<div class="ln"><span>${esc(i.item_description)}${i.micron ? " · " + esc(i.micron) : ""}${i.size ? " · " + esc(i.size) : ""}</span><b>${esc(i.quantity)} ${esc(i.unit || "")}</b></div>`).join("");
-      return `<tr><td><b>${esc(o.po_id)}</b><br><small>${esc(title(o.assigned_employee))} · ${fmt(o.order_date)}</small></td><td>${esc(o.company_name)}</td><td>${ln || "-"}</td><td>${fmt(o.delivery_date)}</td><td>${badge(o.status)}</td></tr>`;
-    }).join("") + `</tbody></table></div>`;
+  const head = ["Order", "Company"].concat(full ? ["Order date"] : [], ["Item description", "Micron", "Size", "Qty"], full ? ["Item status"] : [], ["Delivery", "Status"], full ? [""] : []);
+  const cells = it => `<td>${esc(it.item_description || "-")}</td><td>${esc(it.micron)}</td><td>${esc(it.size)}</td><td class="q">${it.quantity != null ? esc(it.quantity) + " " + esc(it.unit || "") : ""}</td>` +
+    (full ? "<td>" + (!it.id ? "" : canUpd() ? `<select data-item="${it.id}" aria-label="Item status">${ISTAT.map(x => `<option${x === it.item_status ? " selected" : ""}>${x}</option>`).join("")}</select>` : badge(it.item_status || "Pending")) + "</td>" : "");
+  let n = 0;
+  const body = list.map(o => {
+    const its = items.filter(i => i.order_id === o.id), rs = Math.max(its.length, 1), r = ` rowspan="${rs}"`;
+    const first = `<td${r} class="oc"><b>${esc(o.po_id)}</b><small>${esc(title(o.assigned_employee))}</small></td><td${r}>${esc(o.company_name)}</td>` + (full ? `<td${r}>${fmt(o.order_date)}</td>` : "");
+    const last = `<td${r}>${fmt(o.delivery_date)}${isOverdue(o) ? '<br><span class="b late">Overdue</span>' : ""}</td><td${r}>${badge(o.status)}</td>` +
+      (full ? `<td${r}>${canEdit(o) ? `<button class="alt sm" data-edit="${o.id}" type="button">Edit</button>` : ""}</td>` : "");
+    const rows = (its.length ? its : [{}]).map((it, k) => `<tr>${k ? "" : first}${cells(it)}${k ? "" : last}</tr>`).join("");
+    return `<tbody style="--i:${Math.min(n++, 14)}">${rows}</tbody>`;
+  }).join("");
+  return `<div class="scroll tw"><table class="og"><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead>${body}</table></div>`;
+}
+const secTable = list => ordTable(list, false);
+let lastK = "";
+function kpiAnim() {
+  const k = [...document.querySelectorAll(".kpi b")], key = k.map(x => x.textContent).join();
+  if (key === lastK) return; lastK = key;
+  k.forEach(el => { const to = +el.textContent; if (!to) return; const t0 = performance.now();
+    const step = t => { const p = Math.min(1, (t - t0) / 650); el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step); });
 }
 function renderDash() {
   const h = new Date().getHours(), g = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening", t = today();
@@ -352,6 +412,7 @@ function renderDash() {
     ["truck","Dispatched",n("Dispatched"),"k6","Dispatched"],
     ["alert","Overdue",orders.filter(o => bucket(o) === "overdue").length,"k5",""]];
   $("kpis").innerHTML = K.map(k => `<div class="kpi ${k[3]}"${k[4] ? ` data-go="${k[4]}" title="Open the full list"` : ""}><i>${ico(k[0])}</i><div><b>${k[2]}</b><small>${k[1]}</small></div></div>`).join("");
+  kpiAnim();
   const P = [
     ["Overdue", `Still open ${OVERDUE_AFTER} days after placing, or the delivery date has passed`, overdue, "late"],
     ["Due", "Placed yesterday and still open", due, ""],
@@ -362,31 +423,26 @@ function renderDash() {
 }
 
 function renderOrders() {
-  const q = $("q").value.toLowerCase();
-  const list = orders.filter(o => (!fstat || o.status === fstat) && matches(o, q));
+  const q = $("q").value.toLowerCase(), cur = $("fsp").value, dt = $("fdt").value;
+  const names = [...new Set(orders.map(o => o.assigned_employee).filter(Boolean))].sort();
+  $("fsp").innerHTML = '<option value="">All</option>' + names.map(n => `<option value="${esc(n)}"${n === cur ? " selected" : ""}>${esc(title(n))}</option>`).join("");
+  const list = orders.filter(o => (!fstat || o.status === fstat) && matches(o, q) && (!$("fsp").value || o.assigned_employee === $("fsp").value) && (!dt || o.delivery_date === dt));
+  $("ocount").textContent = list.length + " order" + (list.length === 1 ? "" : "s");
   const G = [
     ["Open orders", "Pending and in production", o => isOpen(o)],
     ["Completed", "Production finished, waiting to be dispatched", o => o.status === "Completed"],
     ["Dispatched", "Left the factory", o => o.status === "Dispatched"]];
   $("olist").innerHTML = list.length ? G.map(g => {
     const l = list.filter(g[2]);
-    return l.length ? `<div class="ghead"><h2>${g[0]} (${l.length})</h2><span>${g[1]}</span></div>` + l.map(card).join("") : "";
-  }).join("") : '<p class="empty">No orders match. Change the search or the status filter.</p>';
+    return l.length ? `<div class="ghead"><h2>${g[0]} (${l.length})</h2><span>${g[1]}</span></div>` + ordTable(l, true) : "";
+  }).join("") : '<p class="empty">No orders match. Change the search or the filters.</p>';
 }
-function card(o) {
-  const its = items.filter(i => i.order_id === o.id), done = its.filter(i => i.item_status === "Done" || i.item_status === "Dispatched").length;
-  const pct = its.length ? Math.round(done * 100 / its.length) : 0;
-  const rows = its.map(i => `<tr><td>${esc(i.item_description)}</td><td>${esc(i.micron)}</td><td>${esc(i.size)}</td><td class="n">${esc(i.quantity)} ${esc(i.unit || "")}</td><td>` +
-    (canUpd() ? `<select data-item="${i.id}" aria-label="Item status">${ISTAT.map(s => `<option${s === i.item_status ? " selected" : ""}>${s}</option>`).join("")}</select>` : badge(i.item_status || "Pending")) + `</td></tr>`).join("");
-  return `<details class="card" data-o="${o.id}"${openSet.has(o.id) ? " open" : ""}><summary>` +
-    `<div class="ph"><strong>${esc(o.po_id)}</strong><span>${esc(o.company_name)}</span></div>` +
-    `<div class="meta"><span>${esc(title(o.assigned_employee))}</span><span>Due ${fmt(o.delivery_date)}</span></div>` +
-    `<div class="prog" title="${done} of ${its.length} items done"><i style="width:${pct}%"></i></div>` +
-    (isOverdue(o) ? '<span class="b late">Overdue</span>' : "<span></span>") + badge(o.status) + `</summary>` +
-    `<div class="ctool"><span>Ordered ${fmt(o.order_date)} · Delivery ${fmt(o.delivery_date)}</span>` +
-    `<span class="acts">` + (canEdit(o) ? `<button class="alt sm" data-edit="${o.id}" type="button">Edit order</button>` : "") + `</span></div>` +
-    `<div class="scroll"><table><thead><tr><th>Item</th><th>Micron</th><th>Size</th><th>Qty</th><th>Status</th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="empty">No items</td></tr>'}</tbody></table></div></details>`;
-}
+$("fsp").onchange = renderOrders; $("fdt").onchange = renderOrders;
+$("fclear").onclick = () => {
+  $("q").value = ""; $("fsp").value = ""; $("fdt").value = ""; fstat = "";
+  document.querySelectorAll("#chips button").forEach(x => x.classList.toggle("on", x.dataset.s === ""));
+  renderOrders();
+};
 $("q").oninput = renderOrders;
 $("dq").oninput = renderDash;
 $("kpis").onclick = e => {
@@ -437,7 +493,10 @@ function setEmpOptions() {
     $("emp").innerHTML = `<option>${esc(title(me.name))}</option>`;
     $("emp").disabled = true;
   } else {
-    $("emp").innerHTML = `<option value="">Select sales person</option>` + people.map(p => `<option>${esc(p.name)}</option>`).join("");
+    // Management: dropdown of everyone, with their own name selected by default
+    const mine = title(me.name), list = people.some(p => p.name === mine) ? people : [{ name: mine }].concat(people);
+    $("emp").innerHTML = list.map(p => `<option${p.name === mine ? " selected" : ""}>${esc(p.name)}</option>`).join("");
+    $("emp").value = mine;
     $("emp").disabled = false;
   }
 }
@@ -699,9 +758,38 @@ $("snap").onclick = () => $("fsnap").click();
 $("fpick").onchange = e => handleFile(e.target.files[0]);
 $("fsnap").onchange = e => handleFile(e.target.files[0]);
 $("upstat").onclick = e => { if (e.target.id === "rmfile") clearUpload(); };
-["dragenter", "dragover"].forEach(ev => $("drop").addEventListener(ev, e => { e.preventDefault(); $("drop").classList.add("over"); }));
-["dragleave", "drop"].forEach(ev => $("drop").addEventListener(ev, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
-$("drop").addEventListener("drop", e => handleFile(e.dataTransfer.files[0]));
+// Click or keyboard on the whole drop zone (buttons keep their own action)
+$("drop").addEventListener("click", e => { if (!e.target.closest("button")) $("fpick").click(); });
+$("drop").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("fpick").click(); } });
+
+// The upload screen is open and the user is allowed to start a new order
+const uploadOpen = () => !$("new").classList.contains("hide") && !editing;
+const hasFiles = e => e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") >= 0;
+
+// Drag and drop anywhere on the page
+let dragDepth = 0;
+window.addEventListener("dragenter", e => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth++; if (uploadOpen()) $("dropveil").classList.add("on"); });
+window.addEventListener("dragover", e => { if (hasFiles(e)) e.preventDefault(); });
+window.addEventListener("dragleave", e => { if (!hasFiles(e)) return; dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) $("dropveil").classList.remove("on"); });
+window.addEventListener("drop", e => {
+  if (!hasFiles(e)) return;
+  e.preventDefault(); dragDepth = 0; $("dropveil").classList.remove("on");
+  if (uploadOpen() && e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+
+// Paste with Ctrl+V: screenshots, copied images, copied PDF files
+window.addEventListener("paste", e => {
+  if (!uploadOpen() || !e.clipboardData) return;
+  let f = null;
+  for (const it of e.clipboardData.items || []) {
+    if (it.kind === "file" && (it.type.startsWith("image/") || it.type === "application/pdf")) { f = it.getAsFile(); break; }
+  }
+  if (!f && e.clipboardData.files && e.clipboardData.files.length) f = e.clipboardData.files[0];
+  if (!f) return;                       // normal text paste into fields is untouched
+  e.preventDefault();
+  if (!f.name || f.name === "image.png") f = new File([f], "pasted-" + Date.now() + (f.type === "application/pdf" ? ".pdf" : ".png"), { type: f.type });
+  handleFile(f);
+});
 
 // ---- tabs ----
 function show(t) {
