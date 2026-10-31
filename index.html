@@ -68,6 +68,7 @@ main>section{animation:in .3s ease}
 .kpi small{color:var(--mut)}
 .k1 i{background:#e8eaff;color:var(--blue)}.k2 i{background:#eef0f6;color:#5a6280}.k3 i{background:#fff1d6;color:var(--warn)}.k4 i{background:#dcf5e6;color:var(--ok)}.k5 i{background:#fde4e5;color:var(--red)}.k5 b{color:var(--red)}.k6 i{background:#e3e6ff;color:var(--blue2)}
 .hint{color:var(--mut);font-size:12px;margin:-6px 0 10px}
+.ghead{display:flex;align-items:baseline;gap:10px;margin:20px 0 10px;flex-wrap:wrap}.ghead h2{margin:0;font-size:16px}.ghead span{color:var(--mut);font-size:12px}
 .panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:16px;box-shadow:var(--sh)}
 h2{font-size:15px;margin:0 0 12px}
 .b{display:inline-block;padding:3px 11px;border-radius:99px;font-size:12px;font-weight:700;background:#eceef6;color:#4a5072;white-space:nowrap}
@@ -208,9 +209,12 @@ const canEdit = o => me && (me.role === "Management" || (me.role === "Sales" && 
 const DUE_AFTER = 1, OVERDUE_AFTER = 2;
 const dayNum = s => Math.round(Date.parse(s + "T00:00:00Z") / 864e5);
 const ageDays = o => { const d = o.order_date || String(o.created_at || "").slice(0, 10); return d ? dayNum(today()) - dayNum(d) : 0; };
-// Overdue = not dispatched yet AND (2+ days since placing OR delivery date has passed)
-const isOverdue = o => o.status !== "Dispatched" && ((o.delivery_date && o.delivery_date < today()) || ageDays(o) >= OVERDUE_AFTER);
-const bucket = o => o.status === "Dispatched" ? "" : isOverdue(o) ? "overdue" : ageDays(o) >= DUE_AFTER ? "due" : "new";
+// Open order = still Pending or In Production. Completed and Dispatched orders are never Due or Overdue.
+const isOpen = o => o.status !== "Completed" && o.status !== "Dispatched";
+// Overdue = open AND (2+ days since placing OR delivery date has passed)
+const isOverdue = o => isOpen(o) && ((o.delivery_date && o.delivery_date < today()) || ageDays(o) >= OVERDUE_AFTER);
+const bucket = o => !isOpen(o) ? "" : isOverdue(o) ? "overdue" : ageDays(o) >= DUE_AFTER ? "due" : "new";
+const recent = d => Date.now() - new Date(d) < 2 * 864e5;   // within the last 2 days
 const matches = (o, q) => !q || [o.po_id, o.company_name, o.assigned_employee].join(" ").toLowerCase().includes(q) ||
   items.some(i => i.order_id === o.id && (i.item_description || "").toLowerCase().includes(q));
 function toast(t) { const e = $("toast"); e.textContent = t; e.classList.add("show"); setTimeout(() => e.classList.remove("show"), 2800); }
@@ -299,8 +303,9 @@ function renderDash() {
   const overdue = view.filter(o => bucket(o) === "overdue").sort(byDate);
   const due = view.filter(o => bucket(o) === "due").sort(byDate);
   const fresh = view.filter(o => bucket(o) === "new");
-  const sent = view.filter(o => o.status === "Dispatched" && Date.now() - new Date(o.dispatched_at || o.completed_at || o.created_at) < 2 * 864e5)
-    .sort((a, b) => new Date(b.dispatched_at || b.completed_at || b.created_at) - new Date(a.dispatched_at || a.completed_at || a.created_at));
+  const fin = o => o.completed_at || o.created_at, dis = o => o.dispatched_at || o.completed_at || o.created_at;
+  const done = view.filter(o => o.status === "Completed" && recent(fin(o))).sort((a, b) => new Date(fin(b)) - new Date(fin(a)));
+  const sent = view.filter(o => o.status === "Dispatched" && recent(dis(o))).sort((a, b) => new Date(dis(b)) - new Date(dis(a)));
   const K = [
     ["box","Orders placed today",orders.filter(o => o.order_date === t).length,"k1",""],
     ["clock","Pending",n("Pending"),"k2","Pending"],
@@ -310,9 +315,10 @@ function renderDash() {
     ["alert","Overdue",orders.filter(o => bucket(o) === "overdue").length,"k5",""]];
   $("kpis").innerHTML = K.map(k => `<div class="kpi ${k[3]}"${k[4] ? ` data-go="${k[4]}" title="Open the full list"` : ""}><i>${ico(k[0])}</i><div><b>${k[2]}</b><small>${k[1]}</small></div></div>`).join("");
   const P = [
-    ["Overdue", `Not dispatched after ${OVERDUE_AFTER} days, or the delivery date has passed`, overdue, "late"],
-    ["Due", "Placed yesterday and not dispatched yet", due, ""],
+    ["Overdue", `Still open ${OVERDUE_AFTER} days after placing, or the delivery date has passed`, overdue, "late"],
+    ["Due", "Placed yesterday and still open", due, ""],
     ["New orders", "Placed today", fresh, ""],
+    ["Completed in the last 2 days", "Production finished, waiting to be dispatched", done, "ok"],
     ["Dispatched in the last 2 days", "Products that have left the factory", sent, "ok"]];
   $("secs").innerHTML = P.map(p => `<div class="panel sec ${p[3]}"><h2>${p[0]} (${p[2].length})</h2><p class="hint">${p[1]}</p>${secTable(p[2])}</div>`).join("");
 }
@@ -320,7 +326,14 @@ function renderDash() {
 function renderOrders() {
   const q = $("q").value.toLowerCase();
   const list = orders.filter(o => (!fstat || o.status === fstat) && matches(o, q));
-  $("olist").innerHTML = list.length ? list.map(card).join("") : '<p class="empty">No orders match. Change the search or the status filter.</p>';
+  const G = [
+    ["Open orders", "Pending and in production", o => isOpen(o)],
+    ["Completed", "Production finished, waiting to be dispatched", o => o.status === "Completed"],
+    ["Dispatched", "Left the factory", o => o.status === "Dispatched"]];
+  $("olist").innerHTML = list.length ? G.map(g => {
+    const l = list.filter(g[2]);
+    return l.length ? `<div class="ghead"><h2>${g[0]} (${l.length})</h2><span>${g[1]}</span></div>` + l.map(card).join("") : "";
+  }).join("") : '<p class="empty">No orders match. Change the search or the status filter.</p>';
 }
 function card(o) {
   const its = items.filter(i => i.order_id === o.id), done = its.filter(i => i.item_status === "Done" || i.item_status === "Dispatched").length;
