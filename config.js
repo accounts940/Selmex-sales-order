@@ -7,5 +7,5 @@ window.APP_CONFIG = {
 
   AI_PROVIDER: "gemini",                         // "gemini" or "claude"
   AI_KEY: "PASTE_AI_API_KEY_HER",
-  AI_MODEL: "gemini-2.5-flash"                   // for Claude use e.g. "claude-sonnet-5-5"
+  AI_MODEL: "gemini-3.6-flash"                   // for Claude use e.g. "claude-sonnet-5-5"
 };
