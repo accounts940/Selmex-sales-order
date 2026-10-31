@@ -630,7 +630,7 @@ async function extractFrom(p) {
       if (!res.ok) throw new Error((data.error && data.error.message) || "AI request failed (" + res.status + ")");
       text = (data.content || []).filter(x => x.type === "text").map(x => x.text).join("\n");
     } else {
-      const model = CFG.AI_MODEL || "gemini-2.5-flash";
+      const model = CFG.AI_MODEL || "gemini-3.6-flash";
       res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
         method: "POST", signal: ctl.signal,
         headers: { "content-type": "application/json", "x-goog-api-key": key },
