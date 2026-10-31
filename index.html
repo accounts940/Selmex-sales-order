@@ -170,6 +170,31 @@ table.itb{table-layout:fixed;min-width:760px}
 .itb input,.itb select{width:100%;min-width:0;text-overflow:ellipsis}
 .itb .irow input.s{font-size:13px}
 .itb .irow button{padding:8px 10px;font-size:13px}
+
+table.og{min-width:860px}
+.og th,.og td{padding:10px 8px}
+.og td.nw{white-space:nowrap}
+.og small.mi{display:block;color:var(--mut);font-size:12px}
+.og td.act{white-space:nowrap}
+.og td.act button{display:block;width:100%;margin-bottom:6px}.og td.act button:last-child{margin-bottom:0}
+.pri{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;box-shadow:0 4px 12px #2e319233}
+.pri:hover{box-shadow:0 6px 16px #2e31924d}
+#dback{position:fixed;inset:0;background:#10153a66;backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
+#drawer{position:fixed;top:0;right:0;height:100%;width:min(520px,100%);background:#fff;z-index:61;transform:translateX(100%);transition:transform .32s cubic-bezier(.2,.8,.2,1);box-shadow:-20px 0 50px #10153a33;display:flex;flex-direction:column}
+body.dopen #dback{opacity:1;pointer-events:auto}body.dopen #drawer{transform:none}
+.dh{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line)}
+.dh b{font-size:17px;color:var(--blue);display:block}.dh small{color:var(--mut)}
+.db{padding:16px 20px 28px;overflow-y:auto;flex:1}
+.db h3{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin:18px 0 8px}
+.di{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;animation:in .3s ease both}
+.di b{display:block}.di small{color:var(--mut)}
+#dform .f{margin-bottom:12px}
+#dform textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;resize:vertical}
+#dsave{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;padding:11px 24px;box-shadow:0 6px 16px #2e319240}
+.tl{border-left:2px solid #dfe2f5;margin-left:6px;padding-left:16px}
+.tl div{position:relative;margin-bottom:14px;animation:in .3s ease both}
+.tl div:before{content:"";position:absolute;left:-23px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--blue2);border:2px solid #fff;box-shadow:0 0 0 2px #dfe2f5}
+.tl small{display:block;color:var(--mut);font-size:12px}
 </style>
 </head>
 <body>
@@ -263,6 +288,21 @@ table.itb{table-layout:fixed;min-width:760px}
     </section>
   </main>
 </div>
+<div id="dback"></div>
+<aside id="drawer" aria-label="Order updates" aria-hidden="true">
+  <div class="dh"><div><b id="dtitle"></b><small id="dsub"></small></div><button class="ib" id="dclose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+  <div class="db">
+    <h3>Items and progress</h3><div id="ditems"></div>
+    <div id="dform">
+      <h3>Add an update</h3>
+      <div class="f"><label for="dact">Current action</label><input id="dact" placeholder="e.g. Slitting on machine 2"></div>
+      <div class="f"><label for="dhold">Hold / pending reason</label><input id="dhold" placeholder="e.g. Waiting for raw material"></div>
+      <div class="f"><label for="dnote">Notes</label><textarea id="dnote" rows="3" placeholder="Anything the sales team should know"></textarea></div>
+      <button id="dsave" type="button">Save update</button>
+    </div>
+    <h3>History</h3><div id="dlog" class="tl"></div>
+  </div>
+</aside>
 <div id="toast" role="status"></div>
 
 <script src="config.js"></script>
@@ -375,15 +415,14 @@ let fstat = "", openSet = new Set();
 
 function ordTable(list, full) {
   if (!list.length) return '<p class="empty">None</p>';
-  const head = ["Order", "Company"].concat(full ? ["Order date"] : [], ["Item description", "Micron", "Size", "Qty"], full ? ["Item status"] : [], ["Delivery", "Status"], full ? [""] : []);
-  const cells = it => `<td>${esc(it.item_description || "-")}</td><td>${esc(it.micron)}</td><td>${esc(it.size)}</td><td class="q">${it.quantity != null ? esc(it.quantity) + " " + esc(it.unit || "") : ""}</td>` +
-    (full ? "<td>" + (!it.id ? "" : canUpd() ? `<select data-item="${it.id}" aria-label="Item status">${ISTAT.map(x => `<option${x === it.item_status ? " selected" : ""}>${x}</option>`).join("")}</select>` : badge(it.item_status || "Pending")) + "</td>" : "");
+  const head = ["Order", "Company", "Item", "Size", "Qty", "Placed by", "Delivery", "Status"].concat(full ? [""] : []);
+  const cells = it => `<td>${esc(it.item_description || "-")}${it.micron ? `<small class="mi">${esc(it.micron)}</small>` : ""}</td><td>${esc(it.size)}</td><td class="q">${it.quantity != null ? esc(it.quantity) + " " + esc(it.unit || "") : ""}</td>`;
   let n = 0;
   const body = list.map(o => {
     const its = items.filter(i => i.order_id === o.id), rs = Math.max(its.length, 1), r = ` rowspan="${rs}"`;
-    const first = `<td${r} class="oc"><b>${esc(o.po_id)}</b><small>${esc(title(o.assigned_employee))}</small></td><td${r}>${esc(o.company_name)}</td>` + (full ? `<td${r}>${fmt(o.order_date)}</td>` : "");
-    const last = `<td${r}>${fmt(o.delivery_date)}${isOverdue(o) ? '<br><span class="b late">Overdue</span>' : ""}</td><td${r}>${badge(o.status)}</td>` +
-      (full ? `<td${r}>${canEdit(o) ? `<button class="alt sm" data-edit="${o.id}" type="button">Edit</button>` : ""}</td>` : "");
+    const first = `<td${r} class="oc"><b>${esc(o.po_id)}</b><small>${fmt(o.order_date)}</small></td><td${r}>${esc(o.company_name)}</td>`;
+    const last = `<td${r}>${esc(title(o.assigned_employee))}</td><td${r} class="nw">${fmt(o.delivery_date)}${isOverdue(o) ? '<br><span class="b late">Overdue</span>' : ""}</td><td${r}>${badge(o.status)}</td>` +
+      (full ? `<td${r} class="act"><button class="pri sm" data-upd="${o.id}" type="button">${canUpd() ? "Update" : "Track"}</button>${canEdit(o) ? `<button class="alt sm" data-edit="${o.id}" type="button">Edit</button>` : ""}</td>` : "");
     const rows = (its.length ? its : [{}]).map((it, k) => `<tr>${k ? "" : first}${cells(it)}${k ? "" : last}</tr>`).join("");
     return `<tbody style="--i:${Math.min(n++, 14)}">${rows}</tbody>`;
   }).join("");
@@ -468,12 +507,13 @@ $("olist").addEventListener("toggle", e => {
   const d = e.target; if (d.dataset && d.dataset.o) { d.open ? openSet.add(+d.dataset.o) : openSet.delete(+d.dataset.o); }
 }, true);
 $("olist").onclick = async e => {
+  const u = e.target.closest("button[data-upd]"); if (u) { openUpdate(+u.dataset.upd); return; }
   const b = e.target.closest("button[data-edit]"); if (!b) return;
   startEdit(+b.dataset.edit);
 };
 
 // ---- production / management: change item status ----
-$("olist").onchange = async e => {
+const onItemChange = async e => {
   const sel = e.target.closest("select[data-item]"); if (!sel) return;
   if (!canUpd()) { toast("You can't change status"); return; }
   const it = items.find(x => x.id == sel.dataset.item), status = sel.value;
@@ -491,8 +531,48 @@ $("olist").onchange = async e => {
     if (!r.error) { o.status = os; o.completed_at = upd.completed_at; o.dispatched_at = upd.dispatched_at; }
   }
   await db.from("activity_log").insert({ order_id: o.id, action: `${it.item_description} marked ${status}`, done_by: me.name });
-  toast("Saved"); renderDash(); renderOrders();
+  toast("Saved"); renderDash(); renderOrders(); if (updId) drawItems();
 };
+$("olist").onchange = onItemChange; $("drawer").onchange = onItemChange;
+
+// ---- update drawer: item progress + notes + history ----
+let updId = null;
+function drawItems() {
+  const o = orders.find(x => x.id === updId); if (!o) return;
+  $("dtitle").textContent = o.po_id + " · " + o.company_name;
+  $("dsub").textContent = "Placed by " + title(o.assigned_employee) + " · Ordered " + fmt(o.order_date) + " · Delivery " + fmt(o.delivery_date);
+  const its = items.filter(i => i.order_id === updId);
+  $("ditems").innerHTML = its.map(i => `<div class="di"><div><b>${esc(i.item_description)}</b><small>${[i.micron, i.size].filter(Boolean).map(esc).join(" · ")}${i.micron || i.size ? " · " : ""}${esc(i.quantity)} ${esc(i.unit || "")}</small></div>` +
+    (canUpd() ? `<select data-item="${i.id}" aria-label="Item status">${ISTAT.map(x => `<option${x === i.item_status ? " selected" : ""}>${x}</option>`).join("")}</select>` : badge(i.item_status || "Pending")) + `</div>`).join("") || '<p class="empty">No items</p>';
+}
+async function loadLog(id) {
+  $("dlog").innerHTML = '<p class="empty">Loading...</p>';
+  const r = await db.from("activity_log").select("*").eq("order_id", id).order("created_at", { ascending: false }).limit(50);
+  if (updId !== id) return;
+  if (r.error) { $("dlog").innerHTML = '<p class="empty">History is not available: ' + esc(r.error.message) + '</p>'; return; }
+  $("dlog").innerHTML = r.data.length ? r.data.map(l => `<div><b>${esc(l.action)}</b><small>${esc(title(l.done_by))} · ${l.created_at ? new Date(l.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}</small></div>`).join("") : '<p class="empty">No updates yet</p>';
+}
+function openUpdate(id) {
+  updId = id; drawItems();
+  $("dform").classList.toggle("hide", !canUpd());
+  ["dact", "dhold", "dnote"].forEach(x => $(x).value = "");
+  document.body.classList.add("dopen"); $("drawer").setAttribute("aria-hidden", "false");
+  loadLog(id);
+}
+function closeUpdate() { updId = null; document.body.classList.remove("dopen"); $("drawer").setAttribute("aria-hidden", "true"); }
+$("dclose").onclick = closeUpdate; $("dback").onclick = closeUpdate;
+document.addEventListener("keydown", e => { if (e.key === "Escape" && updId) closeUpdate(); });
+$("dsave").onclick = async () => {
+  if (!canUpd() || !updId) return;
+  const a = $("dact").value.trim(), h = $("dhold").value.trim(), n = $("dnote").value.trim();
+  if (!a && !h && !n) { toast("Write an update first"); return; }
+  const txt = [a && "Action: " + a, h && "Hold: " + h, n && "Note: " + n].filter(Boolean).join(" | ");
+  const { error } = await db.from("activity_log").insert({ order_id: updId, action: txt, done_by: me.name });
+  if (error) { toast("Not saved: " + error.message); return; }
+  ["dact", "dhold", "dnote"].forEach(x => $(x).value = "");
+  toast("Update saved"); loadLog(updId);
+};
+
 
 // ---- order form (new + edit) ----
 function setEmpOptions() {
