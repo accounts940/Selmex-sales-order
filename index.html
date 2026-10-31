@@ -195,6 +195,11 @@ body.dopen #dback{opacity:1;pointer-events:auto}body.dopen #drawer{transform:non
 .tl div{position:relative;margin-bottom:14px;animation:in .3s ease both}
 .tl div:before{content:"";position:absolute;left:-23px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--blue2);border:2px solid #fff;box-shadow:0 0 0 2px #dfe2f5}
 .tl small{display:block;color:var(--mut);font-size:12px}
+.inl td{padding:0!important;background:#fafaff;border-bottom:2px solid #e0e3f5}
+.inl:hover td{background:#fafaff}
+.inlbox{padding:6px 16px 18px;animation:in .3s ease both}
+.inlbox .panel{box-shadow:none}
+#updbox .dh{padding:14px 4px}
 </style>
 </head>
 <body>
@@ -265,6 +270,7 @@ body.dopen #dback{opacity:1;pointer-events:auto}body.dopen #drawer{transform:non
             <div class="upstat hide" id="upstat" role="status"></div>
           </div>
           <div class="editnote hide" id="editnote">You are editing an existing order. Change the details below and press <b>Update order</b>.</div>
+          <div id="editbox">
           <div class="panel">
             <h2 id="ftitle">New sales order</h2>
             <div class="grid f">
@@ -282,14 +288,14 @@ body.dopen #dback{opacity:1;pointer-events:auto}body.dopen #drawer{transform:non
           </div>
           <button id="save">Save order</button><button id="cancel" class="alt hide" type="button">Cancel</button>
           <div class="msg" id="nmsg" role="alert"></div>
+          </div>
         </div>
         <div class="rcol hide" id="pvpanel"><div class="panel pv"><h2>Original file</h2><div id="pvbox"></div></div></div>
       </div>
     </section>
   </main>
 </div>
-<div id="dback"></div>
-<aside id="drawer" aria-label="Order updates" aria-hidden="true">
+<div id="holder" class="hide"><div id="updbox">
   <div class="dh"><div><b id="dtitle"></b><small id="dsub"></small></div><button class="ib" id="dclose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
   <div class="db">
     <h3>Items and progress</h3><div id="ditems"></div>
@@ -302,7 +308,7 @@ body.dopen #dback{opacity:1;pointer-events:auto}body.dopen #drawer{transform:non
     </div>
     <h3>History</h3><div id="dlog" class="tl"></div>
   </div>
-</aside>
+</div></div>
 <div id="toast" role="status"></div>
 
 <script src="config.js"></script>
@@ -415,18 +421,18 @@ let fstat = "", openSet = new Set();
 
 function ordTable(list, full) {
   if (!list.length) return '<p class="empty">None</p>';
-  const head = ["Order", "Company", "Item", "Size", "Qty", "Placed by", "Delivery", "Status"].concat(full ? [""] : []);
+  const head = ["Order", "Company", "Item", "Size", "Qty", "Delivery", "Status"].concat(full ? [""] : []);
   const cells = it => `<td>${esc(it.item_description || "-")}${it.micron ? `<small class="mi">${esc(it.micron)}</small>` : ""}</td><td>${esc(it.size)}</td><td class="q">${it.quantity != null ? esc(it.quantity) + " " + esc(it.unit || "") : ""}</td>`;
   let n = 0;
   const body = list.map(o => {
     const its = items.filter(i => i.order_id === o.id), rs = Math.max(its.length, 1), r = ` rowspan="${rs}"`;
-    const first = `<td${r} class="oc"><b>${esc(o.po_id)}</b><small>${fmt(o.order_date)}</small></td><td${r}>${esc(o.company_name)}</td>`;
-    const last = `<td${r}>${esc(title(o.assigned_employee))}</td><td${r} class="nw">${fmt(o.delivery_date)}${isOverdue(o) ? '<br><span class="b late">Overdue</span>' : ""}</td><td${r}>${badge(o.status)}</td>` +
+    const first = `<td${r} class="oc"><b>${esc(o.po_id)}</b><small>${fmt(o.order_date)}</small></td><td${r}>${esc(o.company_name)}<small class="mi">${esc(title(o.assigned_employee))}</small></td>`;
+    const last = `<td${r} class="nw">${fmt(o.delivery_date)}${isOverdue(o) ? '<br><span class="b late">Overdue</span>' : ""}</td><td${r}>${badge(o.status)}</td>` +
       (full ? `<td${r} class="act"><button class="pri sm" data-upd="${o.id}" type="button">${canUpd() ? "Update" : "Track"}</button>${canEdit(o) ? `<button class="alt sm" data-edit="${o.id}" type="button">Edit</button>` : ""}</td>` : "");
     const rows = (its.length ? its : [{}]).map((it, k) => `<tr>${k ? "" : first}${cells(it)}${k ? "" : last}</tr>`).join("");
-    return `<tbody style="--i:${Math.min(n++, 14)}">${rows}</tbody>`;
+    return `<tbody data-oid="${o.id}" style="--i:${Math.min(n++, 14)}">${rows}</tbody>`;
   }).join("");
-  return `<div class="scroll tw"><table class="og"><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead>${body}</table></div>`;
+  return `<div class="scroll tw"><table class="og" data-cols="${head.length}"><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead>${body}</table></div>`;
 }
 const secTable = list => ordTable(list, false);
 let lastK = "";
@@ -469,6 +475,7 @@ function renderDash() {
 }
 
 function renderOrders() {
+  stash();
   const q = $("q").value.toLowerCase(), cur = $("fsp").value, dt = $("fdt").value;
   const names = [...new Set(orders.map(o => o.assigned_employee).filter(Boolean))].sort();
   $("fsp").innerHTML = '<option value="">All</option>' + names.map(n => `<option value="${esc(n)}"${n === cur ? " selected" : ""}>${esc(title(n))}</option>`).join("");
@@ -482,6 +489,7 @@ function renderOrders() {
     const l = list.filter(g[2]);
     return l.length ? `<div class="ghead"><h2>${g[0]} (${l.length})</h2><span>${g[1]}</span></div>` + ordTable(l, true) : "";
   }).join("") : '<p class="empty">No orders match. Change the search or the filters.</p>';
+  placeInline();
 }
 $("fsp").onchange = renderOrders; $("fdt").onchange = renderOrders;
 $("fclear").onclick = () => {
@@ -533,10 +541,29 @@ const onItemChange = async e => {
   await db.from("activity_log").insert({ order_id: o.id, action: `${it.item_description} marked ${status}`, done_by: me.name });
   toast("Saved"); renderDash(); renderOrders(); if (updId) drawItems();
 };
-$("olist").onchange = onItemChange; $("drawer").onchange = onItemChange;
 
-// ---- update drawer: item progress + notes + history ----
-let updId = null;
+// ---- inline panels (Update / Track / Edit open under the order row) ----
+let updId = null, inl = null;
+const home = () => $("new").querySelector(".lcol");
+function stash() {                       // move the boxes back to their hidden homes
+  const eb = $("editbox"), ub = $("updbox");
+  if (eb.parentElement !== home()) home().appendChild(eb);
+  if (ub.parentElement !== $("holder")) $("holder").appendChild(ub);
+  document.querySelectorAll("tbody.inl").forEach(x => x.remove());
+}
+function placeInline() {
+  if (!inl) return;
+  const row = $("olist").querySelector(`tbody[data-oid="${inl.id}"]`); if (!row) return;
+  const cols = row.closest("table").dataset.cols || 8;
+  const tb = document.createElement("tbody"); tb.className = "inl";
+  tb.innerHTML = `<tr><td colspan="${cols}"><div class="inlbox"></div></td></tr>`;
+  tb.querySelector(".inlbox").appendChild(inl.type === "edit" ? $("editbox") : $("updbox"));
+  row.after(tb);
+  setTimeout(() => tb.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60);
+}
+function homeEdit() { stash(); inl = null; updId = null; }
+
+$("olist").onchange = onItemChange; $("updbox").onchange = onItemChange;
 function drawItems() {
   const o = orders.find(x => x.id === updId); if (!o) return;
   $("dtitle").textContent = o.po_id + " · " + o.company_name;
@@ -553,15 +580,17 @@ async function loadLog(id) {
   $("dlog").innerHTML = r.data.length ? r.data.map(l => `<div><b>${esc(l.action)}</b><small>${esc(title(l.done_by))} · ${l.created_at ? new Date(l.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}</small></div>`).join("") : '<p class="empty">No updates yet</p>';
 }
 function openUpdate(id) {
-  updId = id; drawItems();
+  if (inl && inl.type === "upd" && inl.id === id) { closeUpdate(); return; }   // click again = close
+  if (editing || inl) resetForm();
+  updId = id; inl = { type: "upd", id };
+  drawItems();
   $("dform").classList.toggle("hide", !canUpd());
   ["dact", "dhold", "dnote"].forEach(x => $(x).value = "");
-  document.body.classList.add("dopen"); $("drawer").setAttribute("aria-hidden", "false");
-  loadLog(id);
+  placeInline(); loadLog(id);
 }
-function closeUpdate() { updId = null; document.body.classList.remove("dopen"); $("drawer").setAttribute("aria-hidden", "true"); }
-$("dclose").onclick = closeUpdate; $("dback").onclick = closeUpdate;
-document.addEventListener("keydown", e => { if (e.key === "Escape" && updId) closeUpdate(); });
+function closeUpdate() { homeEdit(); }
+$("dclose").onclick = closeUpdate;
+document.addEventListener("keydown", e => { if (e.key === "Escape" && inl) { inl.type === "edit" ? (resetForm(), show("orders")) : closeUpdate(); } });
 $("dsave").onclick = async () => {
   if (!canUpd() || !updId) return;
   const a = $("dact").value.trim(), h = $("dhold").value.trim(), n = $("dnote").value.trim();
@@ -572,7 +601,6 @@ $("dsave").onclick = async () => {
   ["dact", "dhold", "dnote"].forEach(x => $(x).value = "");
   toast("Update saved"); loadLog(updId);
 };
-
 
 // ---- order form (new + edit) ----
 function setEmpOptions() {
@@ -609,6 +637,7 @@ function addRow(d) {
 $("addrow").onclick = () => addRow();
 
 function resetForm() {
+  homeEdit();
   editing = null; removedIds = [];
   clearUpload(); $("uppanel").classList.remove("hide");
   setEmpOptions();
@@ -636,10 +665,8 @@ function startEdit(id) {
   (its.length ? its : [{}]).forEach(addRow);
   $("ftitle").textContent = "Edit order " + (o.po_id || "");
   $("save").textContent = "Update order";
-  $("tnew").textContent = "Edit order";
-  $("cancel").classList.remove("hide"); $("editnote").classList.remove("hide"); $("uppanel").classList.add("hide");
-  show("new");
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  $("cancel").classList.remove("hide");
+  inl = { type: "edit", id }; placeInline();
 }
 $("cancel").onclick = () => { resetForm(); show("orders"); };
 
@@ -882,7 +909,7 @@ window.addEventListener("paste", e => {
 // ---- tabs ----
 function show(t) {
   if (t === "new" && !canNew()) return;
-  if (t !== "new" && editing) resetForm();
+  if (editing || inl) resetForm();
   ["dash", "orders", "new"].forEach(x => $(x).classList.toggle("hide", x !== t));
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
 }
