@@ -163,6 +163,13 @@ table.og{border-collapse:separate;border-spacing:0;min-width:980px}
 .og .b.late{margin-top:4px}
 .og td select{min-width:120px}
 .ghead{animation:in .3s ease both}
+
+table.itb{table-layout:fixed;min-width:760px}
+.itb th:nth-child(1){width:27%}.itb th:nth-child(2){width:14%}.itb th:nth-child(3){width:28%}.itb th:nth-child(4){width:11%}.itb th:nth-child(5){width:11%}.itb th:nth-child(6){width:9%}
+.itb td{padding:8px 6px}
+.itb input,.itb select{width:100%;min-width:0;text-overflow:ellipsis}
+.itb .irow input.s{font-size:13px}
+.itb .irow button{padding:8px 10px;font-size:13px}
 </style>
 </head>
 <body>
@@ -245,7 +252,7 @@ table.og{border-collapse:separate;border-spacing:0;min-width:980px}
           </div>
           <div class="panel">
             <h2>Items</h2>
-            <div class="scroll"><table><thead><tr><th>Item description</th><th>Micron (in words)</th><th>Size</th><th>Quantity</th><th>Unit</th><th></th></tr></thead><tbody id="irows"></tbody></table></div>
+            <div class="scroll"><table class="itb"><thead><tr><th>Item description</th><th>Micron (in words)</th><th>Size</th><th>Quantity</th><th>Unit</th><th></th></tr></thead><tbody id="irows"></tbody></table></div>
             <p><button class="alt" id="addrow" type="button">Add item</button></p>
           </div>
           <button id="save">Save order</button><button id="cancel" class="alt hide" type="button">Cancel</button>
@@ -509,6 +516,7 @@ function addRow(d) {
   tr.querySelector(".m").value = d.micron || "";
   tr.querySelector(".s").value = d.size || "";
   tr.querySelector(".q").value = d.quantity ?? "";
+  tr.querySelectorAll("input").forEach(i => i.title = i.value);
   const u = tr.querySelector(".u");
   if (d.unit) { if (![...u.options].some(o => o.value === d.unit)) u.add(new Option(d.unit, d.unit)); u.value = d.unit; }
   tr.querySelector("button").onclick = () => {
@@ -735,7 +743,7 @@ function applyExtract(x) {
   });
   return list.length;
 }
-document.addEventListener("input", e => { if (e.target.classList) e.target.classList.remove("warn"); });
+document.addEventListener("input", e => { if (e.target.closest && e.target.closest(".irow") && e.target.tagName === "INPUT") e.target.title = e.target.value; if (e.target.classList) e.target.classList.remove("warn"); });
 document.addEventListener("change", e => { if (e.target.classList) e.target.classList.remove("warn"); });
 
 async function handleFile(file) {
