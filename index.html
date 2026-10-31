@@ -613,34 +613,21 @@ function parseJson(text) {
 }
 
 async function extractFrom(p) {
-  const provider = String(CFG.AI_PROVIDER || "gemini").toLowerCase(), key = CFG.AI_KEY || "";
-  if (!key || /PASTE/.test(key)) throw new Error("the AI key is not set in config.js");
+  if (!db) throw new Error("the app is not connected to Supabase");
   const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 90000);
   try {
-    let res, data, text;
-    if (provider === "claude") {
-      res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST", signal: ctl.signal,
-        headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-        body: JSON.stringify({ model: CFG.AI_MODEL || "claude-sonnet-5-5", max_tokens: 4096, messages: [{ role: "user", content: [
-          { type: p.mime === "application/pdf" ? "document" : "image", source: { type: "base64", media_type: p.mime, data: p.b64 } },
-          { type: "text", text: PROMPT() }] }] })
-      });
-      data = await res.json();
-      if (!res.ok) throw new Error((data.error && data.error.message) || "AI request failed (" + res.status + ")");
-      text = (data.content || []).filter(x => x.type === "text").map(x => x.text).join("\n");
-    } else {
-      const model = CFG.AI_MODEL || "gemini-3.6-flash";
-      res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
-        method: "POST", signal: ctl.signal,
-        headers: { "content-type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({ contents: [{ parts: [{ text: PROMPT() }, { inline_data: { mime_type: p.mime, data: p.b64 } }] }],
-          generationConfig: { temperature: 0, responseMimeType: "application/json" } })
-      });
-      data = await res.json();
-      if (!res.ok) throw new Error((data.error && data.error.message) || "AI request failed (" + res.status + ")");
-      text = ((((data.candidates || [])[0] || {}).content || {}).parts || []).map(x => x.text || "").join("\n");
+    // The AI key lives in Supabase (Edge Function "super-handler"), never in this website
+    const { data, error } = await db.functions.invoke("super-handler", {
+      body: { mimeType: p.mime, base64: p.b64, prompt: PROMPT() },
+      signal: ctl.signal
+    });
+    if (error) {
+      let msg = error.message || "AI request failed";
+      try { const j = await error.context.json(); msg = (j.error && (j.error.message || j.error)) || msg; } catch (_) {}
+      throw new Error(msg);
     }
+    if (data && data.error) throw new Error(data.error.message || String(data.error));
+    const text = ((((data.candidates || [])[0] || {}).content || {}).parts || []).map(x => x.text || "").join("\n");
     return parseJson(text);
   } catch (e) {
     if (e.name === "AbortError") throw new Error("the AI took too long, please try again");
