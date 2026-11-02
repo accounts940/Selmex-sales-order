@@ -164,7 +164,8 @@ table.og{border-collapse:separate;border-spacing:0;min-width:980px}
 .ghead{animation:in .3s ease both}
 
 table.itb{table-layout:fixed;min-width:760px}
-.itb th:nth-child(1){width:27%}.itb th:nth-child(2){width:14%}.itb th:nth-child(3){width:28%}.itb th:nth-child(4){width:11%}.itb th:nth-child(5){width:11%}.itb th:nth-child(6){width:9%}
+.itb th:nth-child(1){width:24%}.itb th:nth-child(2){width:12%}.itb th:nth-child(3){width:24%}.itb th:nth-child(4){width:10%}.itb th:nth-child(5){width:10%}.itb th:nth-child(6){width:12%}.itb th:nth-child(7){width:8%}
+body.norate .rt{display:none}
 .itb td{padding:8px 6px}
 .itb input,.itb select{width:100%;min-width:0;text-overflow:ellipsis}
 .itb .irow input.s{font-size:13px}
@@ -278,7 +279,7 @@ body.dopen #dback{opacity:1;pointer-events:auto}body.dopen #drawer{transform:non
           <div class="panel">
             <h2 id="ftitle">New sales order</h2>
             <div class="grid f">
-              <div><label for="po">PO ID / code</label><input id="po"></div>
+              <div><label for="po">PO ID / code</label><input id="po" placeholder="Leave empty to auto-create"></div>
               <div><label for="co">Company name</label><input id="co"></div>
               <div><label for="emp">Sales person</label><select id="emp"></select></div>
               <div><label for="od">Order date</label><input id="od" type="date"></div>
@@ -287,7 +288,7 @@ body.dopen #dback{opacity:1;pointer-events:auto}body.dopen #drawer{transform:non
           </div>
           <div class="panel">
             <h2>Items</h2>
-            <div class="scroll"><table class="itb"><thead><tr><th>Item description</th><th>Micron (in words)</th><th>Size</th><th>Quantity</th><th>Unit</th><th></th></tr></thead><tbody id="irows"></tbody></table></div>
+            <div class="scroll"><table class="itb"><thead><tr><th>Item description</th><th>Micron (in words)</th><th>Size</th><th>Quantity</th><th>Unit</th><th class="rt">Rate / unit (optional)</th><th></th></tr></thead><tbody id="irows"></tbody></table></div>
             <p><button class="alt" id="addrow" type="button">Add item</button></p>
           </div>
           <button id="save">Save order</button><button id="cancel" class="alt hide" type="button">Cancel</button>
@@ -342,6 +343,10 @@ const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000
 const fmt = d => d ? new Date(d + "T00:00:00").toLocaleDateString("en-GB", {day:"2-digit", month:"short", year:"numeric"}) : "-";
 const badge = s => `<span class="b ${String(s).replace(/\s/g, "").toLowerCase()}">${esc(s)}</span>`;
 const canNew = () => me && (me.role === "Sales" || me.role === "Management");
+const canRate = () => me && (me.role === "Sales" || me.role === "Management");
+const money = n => "₹" + Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+let rateCol = false;
+const rateField = x => (x.rate !== "" && x.rate != null) ? { rate: Number(x.rate) } : (rateCol ? { rate: null } : {});
 const canUpd = () => me && (me.role === "Production" || me.role === "Management");
 // Management can edit any order. Sales can edit their own orders until they are completed.
 const canEdit = o => me && (me.role === "Management" || (me.role === "Sales" && o.status !== "Completed" && o.status !== "Dispatched"));
@@ -386,6 +391,7 @@ async function start(email) {
   me = data;
   $("login").classList.add("hide"); $("app").classList.remove("hide");
   $("un").textContent = title(me.name); $("ur").textContent = me.role; $("av").textContent = me.name.trim().charAt(0).toUpperCase();
+  document.body.classList.toggle("norate", !canRate());
   if (!canNew()) $("tnew").classList.add("hide");
 
   if (me.role === "Sales") {
@@ -420,7 +426,7 @@ async function load() {
     }
     return x;
   });
-  items = i.data;
+  items = i.data; rateCol = items.length > 0 && "rate" in items[0];
   renderDash(); renderOrders();
 }
 
@@ -437,8 +443,9 @@ let fstat = "", openSet = new Set(), onlyToday = false;
 
 function ordTable(list, full) {
   if (!list.length) return '<p class="empty">None</p>';
-  const head = ["Order", "Company", "Item", "Size", "Qty", "Delivery", "Status"].concat(full ? [""] : []);
-  const cells = it => `<td>${esc(it.item_description || "-")}${it.micron ? `<small class="mi">${esc(it.micron)}</small>` : ""}</td><td>${esc(it.size)}</td><td class="q">${it.quantity != null ? esc(it.quantity) + " " + esc(it.unit || "") : ""}</td>`;
+  const head = ["Order", "Company", "Item", "Size", "Qty"].concat(canRate() ? ["Rate"] : [], ["Delivery", "Status"], full ? [""] : []);
+  const cells = it => `<td>${esc(it.item_description || "-")}${it.micron ? `<small class="mi">${esc(it.micron)}</small>` : ""}</td><td>${esc(it.size)}</td><td class="q">${it.quantity != null ? esc(it.quantity) + " " + esc(it.unit || "") : ""}</td>` +
+    (canRate() ? `<td class="q">${it.rate != null && it.rate !== "" ? money(it.rate) + (it.quantity ? `<small class="mi">Total ${money(it.rate * it.quantity)}</small>` : "") : "—"}</td>` : "");
   let n = 0;
   const body = list.map(o => {
     const its = items.filter(i => i.order_id === o.id), rs = Math.max(its.length, 1), r = ` rowspan="${rs}"`;
@@ -585,8 +592,10 @@ function drawItems() {
   $("dtitle").textContent = o.po_id + " · " + o.company_name;
   $("dsub").textContent = "Placed by " + title(o.assigned_employee) + " · Ordered " + fmt(o.order_date) + " · Delivery " + fmt(o.delivery_date);
   const its = items.filter(i => i.order_id === updId);
-  $("ditems").innerHTML = its.map(i => `<div class="di"><div><b>${esc(i.item_description)}</b><small>${[i.micron, i.size].filter(Boolean).map(esc).join(" · ")}${i.micron || i.size ? " · " : ""}${esc(i.quantity)} ${esc(i.unit || "")}</small></div>` +
+  $("ditems").innerHTML = its.map(i => `<div class="di"><div><b>${esc(i.item_description)}</b><small>${[i.micron, i.size].filter(Boolean).map(esc).join(" · ")}${i.micron || i.size ? " · " : ""}${esc(i.quantity)} ${esc(i.unit || "")}${canRate() && i.rate != null ? " · " + money(i.rate) + " each" : ""}</small></div>` +
     (canUpd() ? `<select data-item="${i.id}" aria-label="Item status">${ISTAT.map(x => `<option${x === i.item_status ? " selected" : ""}>${x}</option>`).join("")}</select>` : badge(i.item_status || "Pending")) + `</div>`).join("") || '<p class="empty">No items</p>';
+  const tot = its.reduce((a, i) => a + (i.rate != null ? i.rate * i.quantity : 0), 0);
+  if (canRate() && tot > 0) $("ditems").innerHTML += `<div class="di" style="background:#f8f9ff"><b>Bill total (before tax)</b><b>${money(tot)}</b></div>`;
 }
 async function loadLog(id) {
   $("dlog").innerHTML = '<p class="empty">Loading...</p>';
@@ -635,11 +644,12 @@ function addRow(d) {
   d = d || {};
   const tr = document.createElement("tr"); tr.className = "irow";
   if (d.id) tr.dataset.id = d.id;
-  tr.innerHTML = `<td><input class="d" aria-label="Item description"></td><td><input class="m" placeholder="e.g. Fifty" aria-label="Micron"></td><td><input class="s" placeholder="48mm x 65m" aria-label="Size"></td><td><input class="q" type="number" min="0" step="any" aria-label="Quantity"></td><td><select class="u" aria-label="Unit">${UNITS.map(u => `<option>${u}</option>`).join("")}</select></td><td><button type="button" class="alt" aria-label="Remove item">Remove</button></td>`;
+  tr.innerHTML = `<td><input class="d" aria-label="Item description"></td><td><input class="m" placeholder="e.g. Fifty" aria-label="Micron"></td><td><input class="s" placeholder="48mm x 65m" aria-label="Size"></td><td><input class="q" type="number" min="0" step="any" aria-label="Quantity"></td><td><select class="u" aria-label="Unit">${UNITS.map(u => `<option>${u}</option>`).join("")}</select></td><td class="rt"><input class="r" type="number" min="0" step="any" placeholder="optional" aria-label="Rate per unit"></td><td><button type="button" class="alt" aria-label="Remove item">Remove</button></td>`;
   tr.querySelector(".d").value = d.item_description || "";
   tr.querySelector(".m").value = d.micron || "";
   tr.querySelector(".s").value = d.size || "";
   tr.querySelector(".q").value = d.quantity ?? "";
+  tr.querySelector(".r").value = d.rate ?? "";
   tr.querySelectorAll("input").forEach(i => i.title = i.value);
   const u = tr.querySelector(".u");
   if (d.unit) { if (![...u.options].some(o => o.value === d.unit)) u.add(new Option(d.unit, d.unit)); u.value = d.unit; }
@@ -691,7 +701,7 @@ function readRows() {
   document.querySelectorAll(".irow").forEach(r => {
     const x = {
       item_description: r.querySelector(".d").value.trim(), micron: r.querySelector(".m").value.trim(),
-      size: r.querySelector(".s").value.trim(), quantity: r.querySelector(".q").value, unit: r.querySelector(".u").value
+      size: r.querySelector(".s").value.trim(), quantity: r.querySelector(".q").value, unit: r.querySelector(".u").value, rate: r.querySelector(".r").value
     };
     const id = r.dataset.id ? +r.dataset.id : null;
     if (!x.item_description && !x.quantity) { if (id) del.push(id); return; } // blank row
@@ -700,15 +710,21 @@ function readRows() {
   return { rows: out, del };
 }
 
+async function autoPo() {            // short numbers: SO-0001, SO-0002 ...
+  try { const r = await db.rpc("next_order_no"); if (!r.error && r.data) return r.data; } catch (e) {}
+  const nums = orders.map(o => /^SO-(\d+)$/.exec(o.po_id || "")).filter(Boolean).map(m => +m[1]);
+  return "SO-" + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(4, "0");
+}
 $("save").onclick = async () => {
   const msg = $("nmsg"); msg.textContent = "";
   if (!canNew()) { toast("You can't create or edit orders"); return; }
-  const po = $("po").value.trim(), co = $("co").value.trim();
+  let po = $("po").value.trim(); const co = $("co").value.trim();
   const { rows, del } = readRows();
   const empName = me.role === "Sales" ? title(me.name) : $("emp").value;
-  if (!po || !co || !$("od").value) { msg.textContent = "Enter the PO ID, company name and order date."; return; }
+  if (!co || !$("od").value) { msg.textContent = "Enter the company name and order date."; return; }
   if (!empName) { msg.textContent = "Select the sales person."; return; }
   if (!rows.length || rows.some(r => !r.item_description || !(Number(r.quantity) > 0))) { msg.textContent = "Each item needs a description and a quantity above 0."; return; }
+  if (!po) { po = await autoPo(); $("po").value = po; }
   const person = people.find(p => p.name === empName);
   const salesPhone = me.role === "Sales" ? me.phone : (person ? person.phone : null);
   $("save").disabled = true;
@@ -727,7 +743,7 @@ async function saveNew(po, co, empName, salesPhone, rows) {
     status: "Pending", order_date: $("od").value, delivery_date: $("dd").value || null
   }).select().single();
   if (error) { msg.textContent = "Order not saved: " + error.message; return; }
-  const r2 = await db.from("order_items").insert(rows.map(r => ({ item_description: r.item_description, micron: r.micron, size: r.size, unit: r.unit, quantity: Number(r.quantity), item_status: "Pending", order_id: o.id })));
+  const r2 = await db.from("order_items").insert(rows.map(r => ({ item_description: r.item_description, micron: r.micron, size: r.size, unit: r.unit, quantity: Number(r.quantity), ...rateField(r), item_status: "Pending", order_id: o.id })));
   if (r2.error) { msg.textContent = "Order saved but items failed: " + r2.error.message + ". Ask Management to delete order " + po + " and enter it again."; await load(); return; }
   await db.from("activity_log").insert({ order_id: o.id, action: "Order created", done_by: me.name });
   resetForm(); toast("Order saved"); await load(); show("orders");
@@ -741,10 +757,10 @@ async function saveEdit(po, co, empName, salesPhone, rows, del) {
   const r = await db.from("orders").update(upd).eq("id", id).select();
   if (r.error || !r.data.length) { return fail("Order not updated: " + (r.error ? r.error.message : "you don't have permission, or the order is already completed.")); }
   for (const x of rows.filter(x => x.id)) {
-    const rr = await db.from("order_items").update({ item_description: x.item_description, micron: x.micron, size: x.size, unit: x.unit, quantity: Number(x.quantity) }).eq("id", x.id).select();
+    const rr = await db.from("order_items").update({ item_description: x.item_description, micron: x.micron, size: x.size, unit: x.unit, quantity: Number(x.quantity), ...rateField(x) }).eq("id", x.id).select();
     if (rr.error || !rr.data.length) return fail("An item could not be updated" + (rr.error ? ": " + rr.error.message : "") + ". Other changes were saved.");
   }
-  const fresh = rows.filter(x => !x.id).map(x => ({ item_description: x.item_description, micron: x.micron, size: x.size, unit: x.unit, quantity: Number(x.quantity), item_status: "Pending", order_id: id }));
+  const fresh = rows.filter(x => !x.id).map(x => ({ item_description: x.item_description, micron: x.micron, size: x.size, unit: x.unit, quantity: Number(x.quantity), ...rateField(x), item_status: "Pending", order_id: id }));
   if (fresh.length) {
     const ri = await db.from("order_items").insert(fresh);
     if (ri.error) return fail("New items not added: " + ri.error.message);
@@ -772,10 +788,10 @@ Rules:
 - order_date and delivery_date as YYYY-MM-DD. Dates in the document are normally DD/MM/YYYY (Indian format). Today is ${today()}. Use null if not shown.
 - items = one entry per product line. item_description = the product name and variant. micron = thickness in microns written in English words (for example 50 becomes "Fifty"), null if not shown. size = dimensions such as "48mm x 65m" or "1/2IN x 500M", null if not shown. quantity = a number. unit = one of Boxes, Pcs, Rolls, Cartons, Bundles, Kg, Meters (EA, NOS, PC, Count mean Pcs; KG means Kg; MTR means Meters; CTN means Cartons), null if unclear.
 - Do not invent anything. If a value is unreadable or you are guessing, use null, or set "uncertain": true on that item, and list the top-level fields you are unsure about in uncertain_fields.
-- Ignore prices, taxes, totals, addresses, GST numbers and terms.
+- rate = the price per single unit exactly as printed (a plain number, no currency symbol, before tax), null if not shown. Ignore taxes, totals, addresses, GST numbers and terms.
 
 Return ONLY JSON, with no other text, in exactly this shape:
-{"company_name":string|null,"po_number":string|null,"order_date":string|null,"delivery_date":string|null,"items":[{"item_description":string,"micron":string|null,"size":string|null,"quantity":number|null,"unit":string|null,"uncertain":boolean}],"uncertain_fields":[string],"notes":string|null}`;
+{"company_name":string|null,"po_number":string|null,"order_date":string|null,"delivery_date":string|null,"items":[{"item_description":string,"micron":string|null,"size":string|null,"quantity":number|null,"unit":string|null,"rate":number|null,"uncertain":boolean}],"uncertain_fields":[string],"notes":string|null}`;
 
 const toB64 = blob => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = () => rej(new Error("Could not read the file")); r.readAsDataURL(blob); });
 
@@ -850,14 +866,14 @@ function applyExtract(x) {
   if (okDate(x.order_date)) $("od").value = x.order_date;
   if (okDate(x.delivery_date)) $("dd").value = x.delivery_date;
   mark("co", !x.company_name || unsure.has("company_name"));
-  mark("po", !x.po_number || unsure.has("po_number"));
+  mark("po", !!x.po_number && unsure.has("po_number"));
   mark("dd", !okDate(x.delivery_date) || unsure.has("delivery_date"));
   mark("od", unsure.has("order_date"));
   const list = (Array.isArray(x.items) ? x.items : []).filter(i => i && (i.item_description || i.quantity));
   $("irows").innerHTML = "";
   (list.length ? list : [{}]).forEach(i => {
     const q = Number(i.quantity), unit = normUnit(i.unit);
-    addRow({ item_description: i.item_description || "", micron: i.micron || "", size: i.size || "", quantity: q > 0 ? q : "", unit });
+    addRow({ item_description: i.item_description || "", micron: i.micron || "", size: i.size || "", quantity: q > 0 ? q : "", unit, rate: Number(i.rate) > 0 ? Number(i.rate) : "" });
     const row = $("irows").lastElementChild, bad = i.uncertain === true;
     row.querySelectorAll("input").forEach(el => { if (bad) el.classList.add("warn"); });
     if (!(q > 0)) row.querySelector(".q").classList.add("warn");
