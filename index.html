@@ -969,7 +969,7 @@ setInterval(autoRefresh, 60000);
 
 
 // ---- Management: email the pending list now (the daily email uses the same function) ----
-const MAIL_FN = "send-pending";            // name of the Supabase Edge Function
+const MAIL_FN = "swift-task";            // name of the Supabase Edge Function
 document.addEventListener("click", async e => {
   const b = e.target.closest("#mailpend"); if (!b || me.role !== "Management") return;
   b.disabled = true; const old = b.textContent; b.textContent = "Sending...";
