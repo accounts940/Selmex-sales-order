@@ -331,6 +331,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 // "MANJEET SINGH" -> "Manjeet Singh"
 const title = s => String(s ?? "").trim().toLowerCase().replace(/(^|[\s.'-])([a-z])/g, (m, a, b) => a + b.toUpperCase());
+const placedToday = o => { const t = today(); return o.order_date === t || (!!o.created_at && new Date(new Date(o.created_at).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) === t); };
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 const fmt = d => d ? new Date(d + "T00:00:00").toLocaleDateString("en-GB", {day:"2-digit", month:"short", year:"numeric"}) : "-";
 const badge = s => `<span class="b ${String(s).replace(/\s/g, "").toLowerCase()}">${esc(s)}</span>`;
@@ -403,7 +404,16 @@ async function load() {
     db.from("order_items").select("*").order("id")
   ]);
   if (o.error || i.error) { toast("Could not load data: " + (o.error || i.error).message); return; }
-  orders = o.data.map(x => x.status === "Confirmed" ? { ...x, status: "Pending" } : x);
+  const derive = st => st.every(v => v === "Dispatched") ? "Dispatched" : st.every(v => v === "Done" || v === "Dispatched") ? "Completed" : st.some(v => v !== "Pending") ? "In Production" : "Pending";
+  orders = o.data.map(x => {
+    if (x.status === "Confirmed") x = { ...x, status: "Pending" };
+    if (x.status === "Pending" || x.status === "In Production") {      // open orders follow their items
+      const st = i.data.filter(y => y.order_id === x.id).map(y => y.item_status || "Pending");
+      if (st.length) { const ds = derive(st);
+        if (ds !== x.status) { x = { ...x, status: ds }; if (canUpd()) db.from("orders").update({ status: ds }).eq("id", x.id).then(() => {}); } }
+    }
+    return x;
+  });
   items = i.data;
   renderDash(); renderOrders();
 }
@@ -417,7 +427,7 @@ const IC = {
   alert: '<path d="M12 9v4M12 17h.01M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/>'
 };
 const ico = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>`;
-let fstat = "", openSet = new Set();
+let fstat = "", openSet = new Set(), onlyToday = false;
 
 function ordTable(list, full) {
   if (!list.length) return '<p class="empty">None</p>';
@@ -457,7 +467,7 @@ function renderDash() {
   const done = view.filter(o => o.status === "Completed" && recent(fin(o))).sort((a, b) => new Date(fin(b)) - new Date(fin(a)));
   const sent = view.filter(o => o.status === "Dispatched" && recent(dis(o))).sort((a, b) => new Date(dis(b)) - new Date(dis(a)));
   const K = [
-    ["box","Orders placed today",orders.filter(o => o.order_date === t).length,"k1",""],
+    ["box","Orders placed today",orders.filter(placedToday).length,"k1","Today"],
     ["clock","Pending",n("Pending"),"k2","Pending"],
     ["play","In production",n("In Production"),"k3","In Production"],
     ["check","Completed",n("Completed"),"k4","Completed"],
@@ -479,8 +489,8 @@ function renderOrders() {
   const q = $("q").value.toLowerCase(), cur = $("fsp").value, dt = $("fdt").value;
   const names = [...new Set(orders.map(o => o.assigned_employee).filter(Boolean))].sort();
   $("fsp").innerHTML = '<option value="">All</option>' + names.map(n => `<option value="${esc(n)}"${n === cur ? " selected" : ""}>${esc(title(n))}</option>`).join("");
-  const list = orders.filter(o => (!fstat || o.status === fstat) && matches(o, q) && (!$("fsp").value || o.assigned_employee === $("fsp").value) && (!dt || o.delivery_date === dt));
-  $("ocount").textContent = list.length + " order" + (list.length === 1 ? "" : "s");
+  const list = orders.filter(o => (!fstat || o.status === fstat) && (!onlyToday || placedToday(o)) && matches(o, q) && (!$("fsp").value || o.assigned_employee === $("fsp").value) && (!dt || o.delivery_date === dt));
+  $("ocount").textContent = list.length + " order" + (list.length === 1 ? "" : "s") + (onlyToday ? " placed today" : "");
   const G = [
     ["Open orders", "Pending and in production", o => isOpen(o)],
     ["Completed", "Production finished, waiting to be dispatched", o => o.status === "Completed"],
@@ -493,7 +503,7 @@ function renderOrders() {
 }
 $("fsp").onchange = renderOrders; $("fdt").onchange = renderOrders;
 $("fclear").onclick = () => {
-  $("q").value = ""; $("fsp").value = ""; $("fdt").value = ""; fstat = "";
+  $("q").value = ""; $("fsp").value = ""; $("fdt").value = ""; fstat = ""; onlyToday = false;
   document.querySelectorAll("#chips button").forEach(x => x.classList.toggle("on", x.dataset.s === ""));
   renderOrders();
 };
@@ -501,13 +511,13 @@ $("q").oninput = renderOrders;
 $("dq").oninput = renderDash;
 $("kpis").onclick = e => {
   const k = e.target.closest("[data-go]"); if (!k) return;
-  fstat = k.dataset.go;
+  onlyToday = k.dataset.go === "Today"; fstat = onlyToday ? "" : k.dataset.go;
   document.querySelectorAll("#chips button").forEach(x => x.classList.toggle("on", x.dataset.s === fstat));
   renderOrders(); show("orders");
 };
 $("chips").onclick = e => {
   const b = e.target.closest("button[data-s]"); if (!b) return;
-  fstat = b.dataset.s;
+  fstat = b.dataset.s; onlyToday = false;
   document.querySelectorAll("#chips button").forEach(x => x.classList.toggle("on", x === b));
   renderOrders();
 };
