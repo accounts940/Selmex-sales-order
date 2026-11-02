@@ -119,8 +119,7 @@ tr:last-child td{border-bottom:0}td.n{text-align:right}td select{min-width:130px
 @media(max-width:1000px){.split.has{display:block}.rcol{position:static}}
 .drop{border:2px dashed #c9ccf0;border-radius:14px;padding:18px;text-align:center;background:#fafaff;transition:background .15s,border-color .15s}
 .drop.over{background:#eef0ff;border-color:var(--blue2)}
-.drop{cursor:pointer;padding:22px 18px}
-.drop:hover,.drop:focus-visible{background:#f3f4ff;border-color:var(--blue2);outline:none}
+.drop{padding:22px 18px}
 .drop .dicon{font-size:30px;line-height:1}
 .drop .dtitle{font-size:17px;font-weight:700;color:var(--ink,#1b1f3b);margin:6px 0 2px}
 .drop .dsub{font-size:13px}
@@ -200,6 +199,11 @@ body.dopen #dback{opacity:1;pointer-events:auto}body.dopen #drawer{transform:non
 .inlbox{padding:6px 16px 18px;animation:in .3s ease both}
 .inlbox .panel{box-shadow:none}
 #updbox .dh{padding:14px 4px}
+#camov{position:fixed;inset:0;z-index:100;background:#0b0f2acc;backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px}
+#camov.hide{display:none}
+.cambox{background:#fff;border-radius:18px;padding:14px;width:min(620px,100%);box-shadow:0 30px 80px #0008;animation:in .25s ease both}
+.cambox video{width:100%;max-height:68vh;border-radius:12px;background:#000;display:block}
+.camb{display:flex;gap:10px;justify-content:center;margin-top:12px}
 </style>
 </head>
 <body>
@@ -258,11 +262,11 @@ body.dopen #dback{opacity:1;pointer-events:auto}body.dopen #drawer{transform:non
         <div class="lcol">
           <div class="panel" id="uppanel">
             <h2>Upload a PO, invoice or order photo</h2>
-            <div class="drop" id="drop" tabindex="0" role="button" aria-label="Upload a PO. Click, drop a file, or paste with Ctrl+V">
+            <div class="drop" id="drop">
               <div class="dicon">&#128206;</div>
               <p class="dtitle">Drop your PO here</p>
-              <p class="dsub">or click to browse &middot; or press <kbd>Ctrl</kbd> + <kbd>V</kbd> to paste a screenshot, image or PDF</p>
-              <div class="dbtns"><button class="alt" id="pick" type="button">Choose file</button><button class="alt" id="snap" type="button">Take photo</button></div>
+              <p class="dsub">drag a file here &middot; or press <kbd>Ctrl</kbd> + <kbd>V</kbd> to paste a screenshot, image or PDF</p>
+              <div class="dbtns"><button class="pri" id="pick" type="button">Click to upload</button><button class="alt" id="snap" type="button">Open camera</button></div>
               <p class="hint">PDF, JPG or PNG. The party, items, size, quantity and unit are read automatically and filled into the form below. Check every field before saving. The file is only used to read the details. It is never saved.</p>
               <input id="fpick" type="file" accept="image/*,application/pdf" class="hide">
               <input id="fsnap" type="file" accept="image/*" capture="environment" class="hide">
@@ -309,6 +313,8 @@ body.dopen #dback{opacity:1;pointer-events:auto}body.dopen #drawer{transform:non
     <h3>History</h3><div id="dlog" class="tl"></div>
   </div>
 </div></div>
+<div id="camov" class="hide"><div class="cambox"><video id="camvid" autoplay playsinline muted></video><canvas id="camcv" class="hide"></canvas>
+  <div class="camb"><button id="camshot" class="pri" type="button">Capture</button><button id="camclose" class="alt" type="button">Cancel</button></div></div></div>
 <div id="toast" role="status"></div>
 
 <script src="config.js"></script>
@@ -721,7 +727,7 @@ async function saveNew(po, co, empName, salesPhone, rows) {
     status: "Pending", order_date: $("od").value, delivery_date: $("dd").value || null
   }).select().single();
   if (error) { msg.textContent = "Order not saved: " + error.message; return; }
-  const r2 = await db.from("order_items").insert(rows.map(r => ({ item_description: r.item_description, micron: r.micron, size: r.size, unit: r.unit, quantity: Number(r.quantity), order_id: o.id })));
+  const r2 = await db.from("order_items").insert(rows.map(r => ({ item_description: r.item_description, micron: r.micron, size: r.size, unit: r.unit, quantity: Number(r.quantity), item_status: "Pending", order_id: o.id })));
   if (r2.error) { msg.textContent = "Order saved but items failed: " + r2.error.message + ". Ask Management to delete order " + po + " and enter it again."; await load(); return; }
   await db.from("activity_log").insert({ order_id: o.id, action: "Order created", done_by: me.name });
   resetForm(); toast("Order saved"); await load(); show("orders");
@@ -738,7 +744,7 @@ async function saveEdit(po, co, empName, salesPhone, rows, del) {
     const rr = await db.from("order_items").update({ item_description: x.item_description, micron: x.micron, size: x.size, unit: x.unit, quantity: Number(x.quantity) }).eq("id", x.id).select();
     if (rr.error || !rr.data.length) return fail("An item could not be updated" + (rr.error ? ": " + rr.error.message : "") + ". Other changes were saved.");
   }
-  const fresh = rows.filter(x => !x.id).map(x => ({ item_description: x.item_description, micron: x.micron, size: x.size, unit: x.unit, quantity: Number(x.quantity), order_id: id }));
+  const fresh = rows.filter(x => !x.id).map(x => ({ item_description: x.item_description, micron: x.micron, size: x.size, unit: x.unit, quantity: Number(x.quantity), item_status: "Pending", order_id: id }));
   if (fresh.length) {
     const ri = await db.from("order_items").insert(fresh);
     if (ri.error) return fail("New items not added: " + ri.error.message);
@@ -879,13 +885,28 @@ async function handleFile(file) {
   } finally { $("save").disabled = false; $("fpick").value = ""; $("fsnap").value = ""; }
 }
 $("pick").onclick = () => $("fpick").click();
-$("snap").onclick = () => $("fsnap").click();
+let camStream = null;
+async function openCam() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { $("fsnap").click(); return; }
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 } }, audio: false });
+    $("camvid").srcObject = camStream; $("camov").classList.remove("hide");
+  } catch (e) { toast("Camera is blocked or not found. Allow the camera, or pick a photo instead."); $("fsnap").click(); }
+}
+function closeCam() {
+  if (camStream) camStream.getTracks().forEach(t => t.stop());
+  camStream = null; $("camvid").srcObject = null; $("camov").classList.add("hide");
+}
+$("snap").onclick = openCam; $("camclose").onclick = closeCam;
+$("camshot").onclick = () => {
+  const v = $("camvid"); if (!v.videoWidth) return;
+  const c = $("camcv"); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext("2d").drawImage(v, 0, 0);
+  c.toBlob(b => { closeCam(); if (b) handleFile(new File([b], "camera-" + Date.now() + ".jpg", { type: "image/jpeg" })); }, "image/jpeg", 0.92);
+};
+document.addEventListener("keydown", e => { if (e.key === "Escape" && camStream) closeCam(); });
 $("fpick").onchange = e => handleFile(e.target.files[0]);
 $("fsnap").onchange = e => handleFile(e.target.files[0]);
 $("upstat").onclick = e => { if (e.target.id === "rmfile") clearUpload(); };
-// Click or keyboard on the whole drop zone (buttons keep their own action)
-$("drop").addEventListener("click", e => { if (!e.target.closest("button")) $("fpick").click(); });
-$("drop").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("fpick").click(); } });
 
 // The upload screen is open and the user is allowed to start a new order
 const uploadOpen = () => !$("new").classList.contains("hide") && !editing;
