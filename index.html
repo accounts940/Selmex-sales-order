@@ -937,6 +937,16 @@ window.addEventListener("paste", e => {
   handleFile(f);
 });
 
+// Keep the numbers fresh: reload when the tab is opened again and every minute,
+// but never while someone is typing in an order form or an update panel.
+function autoRefresh() {
+  if (!me || document.visibilityState !== "visible" || inl || editing) return;
+  if (!$("new").classList.contains("hide")) return;
+  load();
+}
+document.addEventListener("visibilitychange", autoRefresh);
+setInterval(autoRefresh, 60000);
+
 // ---- tabs ----
 function show(t) {
   if (t === "new" && !canNew()) return;
