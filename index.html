@@ -55,7 +55,7 @@ header.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:
 nav{display:flex;gap:6px;margin:18px auto 0;max-width:1200px;padding:0 24px;flex-wrap:wrap}
 nav button{background:#fff;color:var(--mut);border:1px solid var(--line);padding:9px 18px;border-radius:999px}
 nav button.on{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 6px 16px #2e319238}
-main{max-width:1200px;margin:0 auto;padding:18px 24px 56px}
+main{max-width:1480px;margin:0 auto;padding:18px 28px 56px}
 main>section{animation:in .3s ease}
 @keyframes in{from{opacity:0;transform:translateY(8px)}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -171,7 +171,7 @@ body.norate .rt{display:none}
 .itb .irow input.s{font-size:13px}
 .itb .irow button{padding:8px 10px;font-size:13px}
 
-table.og{min-width:860px}
+table.og{min-width:1040px}
 .og th,.og td{padding:10px 8px}
 .og td.nw{white-space:nowrap}
 .og small.mi{display:block;color:var(--mut);font-size:12px}
@@ -206,6 +206,55 @@ body.dopen #dback{opacity:1;pointer-events:auto}body.dopen #drawer{transform:non
 .cambox video{width:100%;max-height:68vh;border-radius:12px;background:#000;display:block}
 .camb{display:flex;gap:10px;justify-content:center;margin-top:12px}
 .sh{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+
+/* ===== readability pass ===== */
+.og{min-width:1040px;width:100%;font-size:14.5px}
+.og th,.og td{padding:12px 12px;overflow-wrap:break-word}
+.og th{white-space:nowrap}
+.og td.q,.og td.nw{white-space:nowrap}
+.og td.act,.og th.act{position:sticky;right:0;background:#fff;box-shadow:-10px 0 14px -12px #1b1f4a55;z-index:2;white-space:nowrap;min-width:112px}
+.og thead th.act{background:#f8f9ff;z-index:3}
+.og tbody:hover td.act{background:#f5f6ff}
+.og td.act button{display:block;width:100%;margin-bottom:6px}
+.scroll{scrollbar-width:thin}
+.scroll::-webkit-scrollbar{height:10px}.scroll::-webkit-scrollbar-thumb{background:#c9ccf0;border-radius:10px}
+
+/* items: one readable card per item, no sideways scrolling */
+table.itb{display:block;min-width:0;table-layout:auto}
+.itb thead{display:none}
+.itb tbody{display:block;counter-reset:it}
+.itb tr.irow{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px 14px;padding:16px;margin-bottom:14px;border:1px solid var(--line);border-radius:14px;background:#fbfbff;counter-increment:it}
+.itb tr.irow::before{content:"Item " counter(it);grid-column:1/10;grid-row:1;font-weight:700;color:var(--blue);align-self:center}
+.itb td{display:block;padding:0;border:0;min-width:0}
+.itb td[data-l]::before{content:attr(data-l);display:block;font-size:12.5px;font-weight:600;color:var(--mut);margin-bottom:5px}
+.itb td:last-child{grid-column:10/13;grid-row:1;justify-self:end}
+.itb td:nth-child(1){grid-column:span 7;order:1}
+.itb td:nth-child(3){grid-column:span 5;order:2}
+.itb td:nth-child(2){grid-column:span 3;order:3}
+.itb td:nth-child(4){grid-column:span 3;order:4}
+.itb td:nth-child(5){grid-column:span 3;order:5}
+.itb td.rt{grid-column:span 3;order:6}
+.itb input,.itb select,.itb textarea{width:100%;min-width:0;font:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:inherit}
+.itb textarea{min-height:64px;line-height:1.4;resize:vertical;overflow:hidden}
+.itb input:focus,.itb select:focus,.itb textarea:focus,#new input:focus,#new select:focus{outline:2px solid #8f93e0;outline-offset:1px}
+#new input,#new select{font-size:15px}
+.itb td:has(.warn)::after,.f:has(.warn)::after{content:"Please check against the original";display:block;font-size:11.5px;color:#a85d00;margin-top:4px;font-weight:600}
+.warn{background:#fff3cd!important;border-color:#e0a21b!important;box-shadow:0 0 0 3px #f6c64a40}
+@media(max-width:720px){.itb td:nth-child(1),.itb td:nth-child(3){grid-column:span 12}.itb td:nth-child(2),.itb td:nth-child(4),.itb td:nth-child(5),.itb td.rt{grid-column:span 6}.itb tr.irow::before{grid-column:1/8}.itb td:last-child{grid-column:8/13}}
+
+/* upload page: bigger original file */
+.split.has{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+.pv #pvbox img{max-height:82vh;cursor:zoom-in}.pv #pvbox embed{height:82vh}
+@media(max-width:1100px){.split.has{grid-template-columns:minmax(0,1fr)}.rcol{position:static}}
+#pvmodal{position:fixed;inset:0;z-index:120;background:#0b0f2aee;display:flex;flex-direction:column}
+#pvmodal.hide{display:none}
+.pvbar{display:flex;align-items:center;gap:12px;padding:12px 18px;color:#fff;background:#10153a}
+.pvbar b{margin-right:auto}.pvbar #pvtools{display:flex;gap:8px}
+.pvbar button{background:#ffffff1f;color:#fff;border:1px solid #ffffff40;padding:8px 16px;border-radius:10px;font-size:15px}
+.pvbar button:hover{background:#ffffff38}
+.pvstage{flex:1;overflow:auto;padding:14px;text-align:center}
+.pvstage img{width:100%;height:auto;max-width:none;cursor:zoom-in;background:#fff;border-radius:6px}
+.pvstage iframe{width:100%;height:100%;border:0;background:#fff;border-radius:6px}
 </style>
 </head>
 <body>
@@ -296,7 +345,7 @@ body.dopen #dback{opacity:1;pointer-events:auto}body.dopen #drawer{transform:non
           <div class="msg" id="nmsg" role="alert"></div>
           </div>
         </div>
-        <div class="rcol hide" id="pvpanel"><div class="panel pv"><h2>Original file</h2><div id="pvbox"></div></div></div>
+        <div class="rcol hide" id="pvpanel"><div class="panel pv"><div class="sh"><h2>Original file</h2><button class="alt sm" id="pvzoom" type="button">Full screen / zoom</button></div><p class="hint" style="margin:0 0 10px">Click the picture to enlarge it and read small text, quantities and rates.</p><div id="pvbox"></div></div></div>
       </div>
     </section>
   </main>
@@ -317,6 +366,10 @@ body.dopen #dback{opacity:1;pointer-events:auto}body.dopen #drawer{transform:non
 </div></div>
 <div id="camov" class="hide"><div class="cambox"><video id="camvid" autoplay playsinline muted></video><canvas id="camcv" class="hide"></canvas>
   <div class="camb"><button id="camshot" class="pri" type="button">Capture</button><button id="camclose" class="alt" type="button">Cancel</button></div></div></div>
+<div id="pvmodal" class="hide" role="dialog" aria-label="Original file">
+  <div class="pvbar"><b>Original file</b><div id="pvtools"><button id="zout" type="button" aria-label="Zoom out">&minus;</button><button id="zin" type="button" aria-label="Zoom in">+</button><button id="zfit" type="button">Fit</button></div><button id="zclose" type="button">Close</button></div>
+  <div class="pvstage" id="pvstage"></div>
+</div>
 <div id="toast" role="status"></div>
 
 <script src="config.js"></script>
@@ -444,7 +497,7 @@ let fstat = "", openSet = new Set(), onlyToday = false;
 
 function ordTable(list, full) {
   if (!list.length) return '<p class="empty">None</p>';
-  const head = ["Order", "Company", "Item", "Size", "Qty"].concat(canRate() ? ["Rate"] : [], ["Delivery", "Status"], full ? [""] : []);
+  const head = ["Order", "Company", "Item", "Size", "Qty"].concat(canRate() ? ["Rate"] : [], ["Delivery", "Status"], full ? ["Actions"] : []);
   const cells = it => `<td>${esc(it.item_description || "-")}${it.micron ? `<small class="mi">${esc(it.micron)}</small>` : ""}</td><td>${esc(it.size)}</td><td class="q">${it.quantity != null ? esc(it.quantity) + " " + esc(it.unit || "") : ""}</td>` +
     (canRate() ? `<td class="q">${it.rate != null && it.rate !== "" ? money(it.rate) + (it.quantity ? `<small class="mi">Total ${money(it.rate * it.quantity)}</small>` : "") : "—"}</td>` : "");
   let n = 0;
@@ -456,7 +509,7 @@ function ordTable(list, full) {
     const rows = (its.length ? its : [{}]).map((it, k) => `<tr>${k ? "" : first}${cells(it)}${k ? "" : last}</tr>`).join("");
     return `<tbody data-oid="${o.id}" style="--i:${Math.min(n++, 14)}">${rows}</tbody>`;
   }).join("");
-  return `<div class="scroll tw"><table class="og" data-cols="${head.length}"><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead>${body}</table></div>`;
+  return `<div class="scroll tw"><table class="og" data-cols="${head.length}"><thead><tr>${head.map(h => `<th${h === "Actions" ? ' class="act"' : ""}>${h}</th>`).join("")}</tr></thead>${body}</table></div>`;
 }
 const secTable = list => ordTable(list, false);
 let lastK = "";
@@ -644,11 +697,12 @@ function setEmpOptions() {
     $("emp").disabled = false;
   }
 }
+const fit = el => { if (el.scrollHeight) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; } };
 function addRow(d) {
   d = d || {};
   const tr = document.createElement("tr"); tr.className = "irow";
   if (d.id) tr.dataset.id = d.id;
-  tr.innerHTML = `<td><input class="d" aria-label="Item description"></td><td><input class="m" placeholder="e.g. Fifty" aria-label="Micron"></td><td><input class="s" placeholder="48mm x 65m" aria-label="Size"></td><td><input class="q" type="number" min="0" step="any" aria-label="Quantity"></td><td><select class="u" aria-label="Unit">${UNITS.map(u => `<option>${u}</option>`).join("")}</select></td><td class="rt"><input class="r" type="number" min="0" step="any" placeholder="optional" aria-label="Rate per unit"></td><td><button type="button" class="alt" aria-label="Remove item">Remove</button></td>`;
+  tr.innerHTML = `<td data-l="Item description"><textarea class="d" rows="2" placeholder="Item name and details" aria-label="Item description"></textarea></td><td data-l="Micron (in words)"><input class="m" placeholder="e.g. Fifty" aria-label="Micron"></td><td data-l="Size"><textarea class="s" rows="2" placeholder="e.g. 48mm x 65m" aria-label="Size"></textarea></td><td data-l="Quantity"><input class="q" type="number" min="0" step="any" aria-label="Quantity"></td><td data-l="Unit"><select class="u" aria-label="Unit">${UNITS.map(u => `<option>${u}</option>`).join("")}</select></td><td class="rt" data-l="Rate per unit (optional)"><input class="r" type="number" min="0" step="any" placeholder="optional" aria-label="Rate per unit"></td><td><button type="button" class="alt" aria-label="Remove item">Remove</button></td>`;
   tr.querySelector(".d").value = d.item_description || "";
   tr.querySelector(".m").value = d.micron || "";
   tr.querySelector(".s").value = d.size || "";
@@ -663,6 +717,7 @@ function addRow(d) {
     tr.remove();
   };
   $("irows").appendChild(tr);
+  tr.querySelectorAll("textarea").forEach(fit);
 }
 $("addrow").onclick = () => addRow();
 
@@ -854,6 +909,28 @@ function setPreview(p) {
   $("pvbox").innerHTML = p.mime === "application/pdf" ? `<embed src="${pvUrl}" type="application/pdf">` : `<img src="${pvUrl}" alt="Uploaded order">`;
   $("pvpanel").classList.remove("hide"); $("split").classList.add("has");
 }
+
+// ---- Original file: full screen with zoom ----
+let pvScale = 1;
+function fitImg() { const im = $("pvimg"); if (im) im.style.width = (pvScale * 100) + "%"; }
+function openPv() {
+  if (!pendingFile || !pvUrl) return;
+  const pdf = pendingFile.mime === "application/pdf";
+  $("pvstage").innerHTML = pdf ? `<iframe src="${pvUrl}" title="Original PO"></iframe>` : `<img id="pvimg" src="${pvUrl}" alt="Original PO">`;
+  $("pvtools").classList.toggle("hide", pdf);
+  pvScale = 1; fitImg();
+  $("pvmodal").classList.remove("hide"); document.body.style.overflow = "hidden";
+}
+function closePv() { $("pvmodal").classList.add("hide"); $("pvstage").innerHTML = ""; document.body.style.overflow = ""; }
+$("pvzoom").onclick = openPv;
+$("pvbox").onclick = e => { if (e.target.tagName === "IMG" || e.target.tagName === "EMBED") openPv(); };
+$("zin").onclick = () => { pvScale = Math.min(4, pvScale + 0.5); fitImg(); };
+$("zout").onclick = () => { pvScale = Math.max(0.5, pvScale - 0.5); fitImg(); };
+$("zfit").onclick = () => { pvScale = 1; fitImg(); };
+$("zclose").onclick = closePv;
+$("pvstage").onclick = e => { if (e.target.id === "pvimg") { pvScale = pvScale > 1 ? 1 : 2.5; fitImg(); } };
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("pvmodal").classList.contains("hide")) closePv(); });
+
 function clearUpload() {
   pendingFile = null;
   if (pvUrl) { URL.revokeObjectURL(pvUrl); pvUrl = null; }
@@ -879,14 +956,15 @@ function applyExtract(x) {
     const q = Number(i.quantity), unit = normUnit(i.unit);
     addRow({ item_description: i.item_description || "", micron: i.micron || "", size: i.size || "", quantity: q > 0 ? q : "", unit, rate: Number(i.rate) > 0 ? Number(i.rate) : "" });
     const row = $("irows").lastElementChild, bad = i.uncertain === true;
-    row.querySelectorAll("input").forEach(el => { if (bad) el.classList.add("warn"); });
+    row.querySelectorAll("input, textarea").forEach(el => { if (bad) el.classList.add("warn"); });
     if (!(q > 0)) row.querySelector(".q").classList.add("warn");
     if (!unit) row.querySelector(".u").classList.add("warn");
     if (!i.item_description) row.querySelector(".d").classList.add("warn");
   });
   return list.length;
 }
-document.addEventListener("input", e => { if (e.target.closest && e.target.closest(".irow") && e.target.tagName === "INPUT") e.target.title = e.target.value; if (e.target.classList) e.target.classList.remove("warn"); });
+document.addEventListener("input", e => { if (e.target.closest && e.target.closest(".irow") && e.target.tagName === "INPUT") e.target.title = e.target.value;
+  if (e.target.tagName === "TEXTAREA") fit(e.target); if (e.target.classList) e.target.classList.remove("warn"); });
 document.addEventListener("change", e => { if (e.target.classList) e.target.classList.remove("warn"); });
 
 async function handleFile(file) {
@@ -898,7 +976,7 @@ async function handleFile(file) {
     pendingFile = p; setPreview(p);
     const x = await extractFrom(p);
     const n = applyExtract(x);
-    setStat("ok", `Found ${n} item${n === 1 ? "" : "s"}. Check the form below. Yellow fields need your attention.` + (x.notes ? " Note: " + esc(x.notes) : "") +
+    setStat("ok", `Found ${n} item${n === 1 ? "" : "s"}. Check the form below. ` + (document.querySelectorAll("#new .warn").length ? document.querySelectorAll("#new .warn").length + " highlighted field(s) need checking against the original file." : "Nothing looks doubtful, but please still check.") + (x.notes ? " Note: " + esc(x.notes) : "") +
       ' <button class="alt sm" id="rmfile" type="button">Remove file</button>');
   } catch (e) {
     setStat("err", "Could not read the file: " + esc(e.message) + ". You can still fill the form by hand." + (pendingFile ? ' <button class="alt sm" id="rmfile" type="button">Remove file</button>' : ""));
@@ -969,7 +1047,7 @@ setInterval(autoRefresh, 60000);
 
 
 // ---- Management: email the pending list now (the daily email uses the same function) ----
-const MAIL_FN = "swift-task";            // name of the Supabase Edge Function
+const MAIL_FN = "send-pending";            // name of the Supabase Edge Function
 document.addEventListener("click", async e => {
   const b = e.target.closest("#mailpend"); if (!b || me.role !== "Management") return;
   b.disabled = true; const old = b.textContent; b.textContent = "Sending...";
