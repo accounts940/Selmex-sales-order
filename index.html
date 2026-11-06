@@ -52,7 +52,7 @@ header.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:
 .ib{background:#eef0fb;color:var(--blue);padding:9px;display:grid;place-items:center}
 .ib:hover{background:#e0e3f8}
 @media(max-width:640px){.user div,.ttl small{display:none}header.top{padding:10px 14px}}
-nav{display:flex;gap:6px;margin:18px auto 0;max-width:1200px;padding:0 24px;flex-wrap:wrap}
+nav{display:flex;gap:6px;margin:18px auto 0;max-width:1480px;padding:0 24px;flex-wrap:wrap}
 nav button{background:#fff;color:var(--mut);border:1px solid var(--line);padding:9px 18px;border-radius:999px}
 nav button.on{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 6px 16px #2e319238}
 main{max-width:1480px;margin:0 auto;padding:18px 28px 56px}
@@ -255,19 +255,95 @@ table.itb{display:block;min-width:0;table-layout:auto}
 .pvstage{flex:1;overflow:auto;padding:14px;text-align:center}
 .pvstage img{width:100%;height:auto;max-width:none;cursor:zoom-in;background:#fff;border-radius:6px}
 .pvstage iframe{width:100%;height:100%;border:0;background:#fff;border-radius:6px}
+
+/* ===================== UI polish ===================== */
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes floaty{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(26px,-30px) scale(1.08)}}
+@keyframes drift{0%,100%{transform:translate(0,0)}50%{transform:translate(-30px,22px)}}
+@keyframes flow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@keyframes shakex{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-8px)}40%,60%{transform:translateX(8px)}}
+@keyframes fadeout{to{opacity:0;transform:scale(1.015)}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 currentColor}70%{box-shadow:0 0 0 6px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@keyframes spinr{to{transform:rotate(360deg)}}
+
+#login.leaving{animation:fadeout .3s ease forwards}
+.lbrand{background:linear-gradient(150deg,#1d2170,#2e3192 45%,#5a3fd0 75%,#2e3192);background-size:220% 220%;animation:flow 16s ease infinite}
+.lbrand:before{animation:drift 14s ease-in-out infinite}.lbrand:after{animation:drift 18s ease-in-out infinite reverse}
+.blob{position:absolute;border-radius:50%;filter:blur(2px);pointer-events:none}
+.blob.b1{width:180px;height:180px;right:12%;bottom:14%;background:radial-gradient(circle at 30% 30%,#ffffff40,#ffffff08);animation:floaty 11s ease-in-out infinite}
+.blob.b2{width:90px;height:90px;left:46%;top:12%;background:radial-gradient(circle at 30% 30%,#e31e2466,#e31e2410);animation:floaty 8s ease-in-out infinite reverse}
+.lbrand>.lcard,.lbrand>h1,.lbrand>p,.lbrand>.lfeat{animation:rise .8s cubic-bezier(.2,.8,.2,1) both}
+.lbrand>h1{animation-delay:.12s}.lbrand>p{animation-delay:.24s}.lbrand>.lfeat{animation-delay:.36s}
+.lcard{transition:transform .4s}.lcard:hover{transform:translateY(-3px) rotate(-1deg)}
+.lfeat{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:10px}
+.lfeat li{display:flex;align-items:center;gap:10px;font-size:14.5px;opacity:.92}
+.lfeat li:before{content:"";width:8px;height:8px;border-radius:50%;background:#ff6a6f;box-shadow:0 0 0 4px #ff6a6f33}
+.lform{background:radial-gradient(700px 360px at 85% 8%,#e9eaff,transparent),radial-gradient(520px 300px at 8% 100%,#ffe9ea,transparent),#f7f8fd}
+.box{backdrop-filter:blur(10px);background:#ffffffee;box-shadow:0 24px 60px #1b1f4a22,0 2px 6px #1b1f4a10;animation:rise .7s .15s cubic-bezier(.2,.8,.2,1) both}
+.box.shake{animation:shakex .5s}
+.box>*{animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
+.box>:nth-child(1){animation-delay:.25s}.box>:nth-child(2){animation-delay:.3s}.box>:nth-child(3){animation-delay:.36s}.box>:nth-child(4){animation-delay:.42s}.box>:nth-child(5){animation-delay:.48s}.box>:nth-child(6){animation-delay:.52s}
+.box input{transition:border-color .2s,box-shadow .25s,background .2s}
+.box input:focus{border-color:var(--blue2);box-shadow:0 0 0 4px #4a4fd02b;background:#fff;outline:none}
+.pwwrap{position:relative}.pwwrap input{padding-right:46px}
+.eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:transparent;color:var(--mut);padding:7px;display:grid;place-items:center;border-radius:8px}
+.eye:hover{background:#eef0fb;color:var(--blue)}.eye.on{color:var(--blue)}
+.capsnote{display:block;margin-top:6px;color:#a85d00;font-weight:600;font-size:12px}
+#go{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:10px;font-size:15px}
+#go:hover:not(:disabled){transform:translateY(-1px)}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid #ffffff66;border-top-color:#fff;border-radius:50%;animation:spinr .7s linear infinite}
+.msg.okmsg{color:var(--ok)}
+
+/* loading bar */
+#topbar{position:fixed;left:0;top:0;height:3px;width:0;z-index:200;background:linear-gradient(90deg,var(--blue),var(--blue2),var(--red));box-shadow:0 0 10px #4a4fd080;opacity:0}
+#topbar.on{opacity:1;animation:bar 1.8s cubic-bezier(.2,.7,.2,1) forwards}
+#topbar.done{opacity:0;width:100%;transition:width .2s,opacity .4s .2s}
+@keyframes bar{from{width:0}to{width:88%}}
+
+/* header, tabs, cards */
+header.top{box-shadow:0 6px 24px #1b1f4a0d}
+header.top:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:linear-gradient(90deg,var(--blue),var(--blue2) 55%,var(--red));opacity:.85}
+nav button{transition:transform .2s,box-shadow .25s,background .25s,color .2s}
+nav button.on{background:linear-gradient(135deg,var(--blue),var(--blue2))}
+.kpi{position:relative;overflow:hidden;cursor:default;animation:rise .55s cubic-bezier(.2,.8,.2,1) both}
+.kpi:nth-child(1){animation-delay:.02s}.kpi:nth-child(2){animation-delay:.07s}.kpi:nth-child(3){animation-delay:.12s}.kpi:nth-child(4){animation-delay:.17s}.kpi:nth-child(5){animation-delay:.22s}.kpi:nth-child(6){animation-delay:.27s}
+.kpi[data-go]{cursor:pointer}
+.kpi:hover{transform:translateY(-4px);box-shadow:0 14px 34px #1b1f4a26}
+.kpi:after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,#ffffff99 50%,transparent 70%);transform:translateX(-120%);transition:transform .7s}
+.kpi:hover:after{transform:translateX(120%)}
+.kpi i{transition:transform .35s cubic-bezier(.3,1.5,.5,1)}.kpi:hover i{transform:scale(1.12) rotate(-6deg)}
+.panel.sec{animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+.panel.sec:nth-child(2){animation-delay:.05s}.panel.sec:nth-child(3){animation-delay:.1s}.panel.sec:nth-child(4){animation-delay:.15s}.panel.sec:nth-child(5){animation-delay:.2s}
+.b{display:inline-flex;align-items:center;gap:6px}
+.b.inproduction:before,.b.late:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 1.8s infinite}
+.og tbody td{transition:background .2s}
+#toast{box-shadow:0 14px 36px #1b1f4a40}
+
+/* buttons: ripple */
+button{position:relative;overflow:hidden}
+.rip{position:absolute;border-radius:50%;background:#ffffff66;transform:scale(0);animation:ripple .6s ease-out forwards;pointer-events:none}
+.alt .rip,.ib .rip,nav button:not(.on) .rip{background:#2e319230}
+@keyframes ripple{to{transform:scale(1);opacity:0}}
+
+/* smoother tab changes and inputs */
+main>section{animation:rise .4s cubic-bezier(.2,.8,.2,1)}
+input,select,textarea{transition:border-color .2s,box-shadow .25s,background .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--blue2)}
 </style>
 </head>
 <body>
 <div id="dropveil"><div>&#128206; Drop the file to read it</div><small>PDF, JPG or PNG</small></div>
 
 <section id="login">
-  <div class="lbrand"><div class="lcard"><img class="logo big" alt="Selmex"></div>
+  <div class="lbrand"><span class="blob b1"></span><span class="blob b2"></span>
+    <div class="lcard"><img class="logo big" alt="Selmex"></div>
     <h1>Every order, from enquiry to delivery.</h1>
-    <p>One place where sales and production see the same orders, live.</p></div>
+    <p>One place where sales and production see the same orders, live.</p>
+    <ul class="lfeat"><li>Live order status for every team</li><li>PO upload that fills the form for you</li><li>Daily summary for Management</li></ul></div>
   <div class="lform"><div class="box">
     <h2>Welcome back</h2><p class="sub">Sign in to continue</p>
     <div class="f"><label for="em">Email</label><input id="em" type="email" autocomplete="username" placeholder="you@foamtapes.in"></div>
-    <div class="f"><label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password"></div>
+    <div class="f"><label for="pw">Password</label><div class="pwwrap"><input id="pw" type="password" autocomplete="current-password"><button type="button" id="pwt" class="eye" aria-label="Show password"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div><small id="caps" class="capsnote hide">Caps Lock is on</small></div>
     <button id="go">Sign in</button><div class="msg" id="lmsg" role="alert"></div>
   </div></div>
 </section>
@@ -370,6 +446,7 @@ table.itb{display:block;min-width:0;table-layout:auto}
   <div class="pvbar"><b>Original file</b><div id="pvtools"><button id="zout" type="button" aria-label="Zoom out">&minus;</button><button id="zin" type="button" aria-label="Zoom in">+</button><button id="zfit" type="button">Fit</button></div><button id="zclose" type="button">Close</button></div>
   <div class="pvstage" id="pvstage"></div>
 </div>
+<div id="topbar"></div>
 <div id="toast" role="status"></div>
 
 <script src="config.js"></script>
@@ -414,6 +491,9 @@ const isOpen = o => o.status !== "Completed" && o.status !== "Dispatched";
 const isOverdue = o => isOpen(o) && ((o.delivery_date && o.delivery_date < today()) || ageDays(o) >= OVERDUE_AFTER);
 const bucket = o => !isOpen(o) ? "" : isOverdue(o) ? "overdue" : ageDays(o) >= DUE_AFTER ? "due" : "new";
 const recent = d => Date.now() - new Date(d) < 2 * 864e5;   // within the last 2 days
+// A dispatched order leaves the dashboard this many days after it was marked Dispatched (it stays in the Orders tab).
+const DISPATCH_KEEP_DAYS = 4;
+const within = (d, days) => Date.now() - new Date(d) < days * 864e5;
 const matches = (o, q) => !q || [o.po_id, o.company_name, o.assigned_employee].join(" ").toLowerCase().includes(q) ||
   items.some(i => i.order_id === o.id && (i.item_description || "").toLowerCase().includes(q));
 function toast(t) { const e = $("toast"); e.textContent = t; e.classList.add("show"); setTimeout(() => e.classList.remove("show"), 2800); }
@@ -421,17 +501,35 @@ function toast(t) { const e = $("toast"); e.textContent = t; e.classList.add("sh
 // ---- sign in ----
 async function boot() {
   if (!db) { $("login").classList.remove("hide"); $("go").disabled = true; $("lmsg").textContent = "Setup missing: open config.js and add your Supabase key."; return; }
+  if (sessionStorage.getItem("selmex_signedout")) {            // just signed out: always show the sign-in screen
+    sessionStorage.removeItem("selmex_signedout");
+    $("login").classList.remove("hide"); $("lmsg").className = "msg okmsg"; $("lmsg").textContent = "You have been signed out.";
+    return;
+  }
   const { data } = await db.auth.getSession();
   if (data.session) start(data.session.user.email); else $("login").classList.remove("hide");
 }
+const shake = () => { const bx = document.querySelector("#login .box"); bx.classList.remove("shake"); void bx.offsetWidth; bx.classList.add("shake"); };
 $("go").onclick = async () => {
-  $("lmsg").textContent = "";
+  const btn = $("go"); $("lmsg").className = "msg"; $("lmsg").textContent = "";
+  if (!$("em").value.trim() || !$("pw").value) { $("lmsg").textContent = "Enter your email and password."; shake(); return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Signing in...';
   const { data, error } = await db.auth.signInWithPassword({ email: $("em").value.trim(), password: $("pw").value });
-  if (error) { $("lmsg").textContent = "Sign in failed: " + error.message; return; }
-  start(data.user.email);
+  btn.disabled = false; btn.textContent = "Sign in";
+  if (error) { $("lmsg").textContent = "Sign in failed: " + error.message; shake(); return; }
+  $("login").classList.add("leaving");
+  setTimeout(async () => { await start(data.user.email); $("login").classList.remove("leaving"); }, 300);
 };
+$("pwt").onclick = () => { const on = $("pw").type === "password"; $("pw").type = on ? "text" : "password"; $("pwt").setAttribute("aria-label", on ? "Hide password" : "Show password"); $("pwt").classList.toggle("on", on); };
+$("pw").addEventListener("keyup", e => { $("caps").classList.toggle("hide", !(e.getModifierState && e.getModifierState("CapsLock"))); });
 $("pw").onkeydown = e => { if (e.key === "Enter") $("go").click(); };
-$("out").onclick = async () => { await db.auth.signOut(); location.reload(); };
+$("out").onclick = async () => {
+  try { await db.auth.signOut({ scope: "local" }); } catch (e) {}
+  // make sure no saved session is left behind, otherwise the page would sign in again by itself
+  Object.keys(localStorage).filter(k => k.indexOf("sb-") === 0 || k.indexOf("supabase") >= 0).forEach(k => localStorage.removeItem(k));
+  sessionStorage.clear(); sessionStorage.setItem("selmex_signedout", "1");
+  location.replace(location.pathname);
+};
 $("refresh").onclick = async () => { await load(); toast("Refreshed"); };
 
 async function start(email) {
@@ -465,6 +563,10 @@ async function start(email) {
 // ---- data ----
 // Supabase RLS decides which rows come back: Sales = own orders, Production/Management = all.
 async function load() {
+  const bar = $("topbar"); bar.className = "on";
+  try { return await loadData(); } finally { bar.className = "done"; setTimeout(() => bar.className = "", 400); }
+}
+async function loadData() {
   const [o, i] = await Promise.all([
     db.from("orders").select("*").order("created_at", { ascending: false }),
     db.from("order_items").select("*").order("id")
@@ -531,14 +633,14 @@ function renderDash() {
   const due = view.filter(o => bucket(o) === "due").sort(byDate);
   const fresh = view.filter(o => bucket(o) === "new");
   const fin = o => o.completed_at || o.created_at, dis = o => o.dispatched_at || o.completed_at || o.created_at;
-  const done = view.filter(o => o.status === "Completed" && recent(fin(o))).sort((a, b) => new Date(fin(b)) - new Date(fin(a)));
-  const sent = view.filter(o => o.status === "Dispatched" && recent(dis(o))).sort((a, b) => new Date(dis(b)) - new Date(dis(a)));
+  const done = view.filter(o => o.status === "Completed").sort((a, b) => new Date(fin(b)) - new Date(fin(a)));
+  const sent = view.filter(o => o.status === "Dispatched" && within(dis(o), DISPATCH_KEEP_DAYS)).sort((a, b) => new Date(dis(b)) - new Date(dis(a)));
   const K = [
     ["box","Orders placed today",orders.filter(placedToday).length,"k1","Today"],
     ["clock","Pending",n("Pending"),"k2","Pending"],
     ["play","In production",n("In Production"),"k3","In Production"],
     ["check","Completed",n("Completed"),"k4","Completed"],
-    ["truck","Dispatched",n("Dispatched"),"k6","Dispatched"],
+    ["truck","Dispatched (4 days)",orders.filter(o => o.status === "Dispatched" && within(dis(o), DISPATCH_KEEP_DAYS)).length,"k6","Dispatched"],
     ["alert","Overdue",orders.filter(o => bucket(o) === "overdue").length,"k5",""]];
   $("kpis").innerHTML = K.map(k => `<div class="kpi ${k[3]}"${k[4] ? ` data-go="${k[4]}" title="Open the full list"` : ""}><i>${ico(k[0])}</i><div><b>${k[2]}</b><small>${k[1]}</small></div></div>`).join("");
   kpiAnim();
@@ -546,8 +648,8 @@ function renderDash() {
     ["Overdue", `Still open ${OVERDUE_AFTER} days after placing, or the delivery date has passed`, overdue, "late"],
     ["Due", "Placed yesterday and still open", due, ""],
     ["New orders", "Placed today", fresh, ""],
-    ["Completed in the last 2 days", "Production finished, waiting to be dispatched", done, "ok"],
-    ["Dispatched in the last 2 days", "Products that have left the factory", sent, "ok"]];
+    ["Completed", "Production finished, waiting to be dispatched. Stays here until it is dispatched", done, "ok"],
+    ["Dispatched in the last 4 days", "Left the factory. Removed from this dashboard 4 days after dispatch, still available in the Orders tab", sent, "ok"]];
   const pend = view.filter(o => o.status === "Pending").sort((a, b) => (a.order_date || "").localeCompare(b.order_date || ""));
   const tp = `<div class="panel sec"><div class="sh"><div><h2>Pending orders (${pend.length})</h2><p class="hint">${orders.filter(placedToday).length} placed today &middot; ${n("Pending")} waiting for production to start</p></div>` +
     (me.role === "Management" ? `<button class="pri sm" id="mailpend" type="button">Email pending list</button>` : "") + `</div>${secTable(pend)}</div>`;
@@ -1047,7 +1149,7 @@ setInterval(autoRefresh, 60000);
 
 
 // ---- Management: email the pending list now (the daily email uses the same function) ----
-const MAIL_FN = "send-pending";            // name of the Supabase Edge Function
+const MAIL_FN = "swift-task";            // name of the Supabase Edge Function
 document.addEventListener("click", async e => {
   const b = e.target.closest("#mailpend"); if (!b || me.role !== "Management") return;
   b.disabled = true; const old = b.textContent; b.textContent = "Sending...";
@@ -1057,6 +1159,15 @@ document.addEventListener("click", async e => {
     toast(data && data.sent ? "Email sent to " + data.to + " Management " + (data.to === 1 ? "person" : "people") : (data && data.message) || "Nothing to send");
   } catch (err) { toast("Email not sent: " + err.message); }
   b.disabled = false; b.textContent = old;
+});
+
+
+// soft ripple on every button press
+document.addEventListener("pointerdown", e => {
+  const b = e.target.closest && e.target.closest("button"); if (!b || b.disabled) return;
+  const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height) * 1.6, sp = document.createElement("span");
+  sp.className = "rip"; sp.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`;
+  b.appendChild(sp); setTimeout(() => sp.remove(), 600);
 });
 
 // ---- tabs ----
