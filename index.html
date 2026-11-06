@@ -329,6 +329,64 @@ button{position:relative;overflow:hidden}
 main>section{animation:rise .4s cubic-bezier(.2,.8,.2,1)}
 input,select,textarea{transition:border-color .2s,box-shadow .25s,background .2s}
 input:focus,select:focus,textarea:focus{border-color:var(--blue2)}
+
+/* ===================== motion graphics ===================== */
+@keyframes slide{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
+@keyframes scan{0%{top:2%}50%{top:96%}100%{top:2%}}
+@keyframes fillflash{0%{background:#d6f5e4;box-shadow:0 0 0 0 #12a15066}60%{box-shadow:0 0 0 7px #12a15000}100%{background:#fff;box-shadow:0 0 0 0 #12a15000}}
+@keyframes ringp{0%{box-shadow:0 0 0 0 #4a4fd066}70%{box-shadow:0 0 0 11px #4a4fd000}100%{box-shadow:0 0 0 0 #4a4fd000}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes wob{0%,100%{transform:rotate(0)}25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
+@keyframes pop{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes wig{0%,60%,100%{transform:rotate(0)}65%{transform:rotate(-10deg)}75%{transform:rotate(10deg)}85%{transform:rotate(-6deg)}}
+@keyframes drive{0%,100%{transform:translateX(-2px)}50%{transform:translateX(3px)}}
+
+/* page background: slow floating colour */
+body:before,body:after{content:"";position:fixed;z-index:-1;border-radius:50%;filter:blur(70px);pointer-events:none}
+body:before{width:520px;height:520px;left:-160px;top:12%;background:#4a4fd024;animation:drift 26s ease-in-out infinite}
+body:after{width:460px;height:460px;right:-140px;bottom:-120px;background:#e31e2416;animation:drift 32s ease-in-out infinite reverse}
+
+/* splash after sign-in */
+#splash{position:fixed;inset:0;z-index:150;background:linear-gradient(150deg,#1d2170,#2e3192 55%,#5a3fd0);display:grid;place-items:center;opacity:0;pointer-events:none;transition:opacity .35s}
+#splash.on{opacity:1;pointer-events:auto}
+.spl-card{text-align:center;color:#fff}
+.spl-card .lcard{margin:0 auto;animation:pop 2.2s ease-in-out infinite}
+.ring{width:46px;height:46px;border-radius:50%;border:4px solid #ffffff33;border-top-color:#fff;animation:spinr .9s linear infinite;margin:26px auto 12px}
+.spl-card p{margin:0;font-size:15px;opacity:.9;letter-spacing:.02em}
+.spl-bar{width:190px;height:4px;background:#ffffff33;border-radius:4px;overflow:hidden;margin:14px auto 0}
+.spl-bar i{display:block;height:100%;width:40%;background:#fff;border-radius:4px;animation:slide 1.1s ease-in-out infinite}
+
+/* login: orders travelling through the process */
+.flow{width:100%;height:auto;aspect-ratio:480/140;stroke:none;max-width:460px;margin:2px 0 0;overflow:visible;animation:rise .8s .3s cubic-bezier(.2,.8,.2,1) both}
+@media(prefers-reduced-motion:reduce){.flow{display:none}}
+
+/* dashboard */
+#hello b{background:linear-gradient(90deg,var(--blue),var(--blue2),var(--red),var(--blue));background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 7s linear infinite}
+.kpi i svg{transform-origin:center}
+.kpi.k1 i svg{animation:bob 2.8s ease-in-out infinite}
+.kpi.k2 i svg{animation:wob 4s ease-in-out infinite}
+.kpi.k3 i svg{animation:pop 2.4s ease-in-out infinite}
+.kpi.k4 i svg *{stroke-dasharray:40;stroke-dashoffset:40;animation:draw 1.1s .5s ease forwards}
+.kpi.k5 i svg{animation:wig 3.6s ease-in-out infinite}
+.kpi.k6 i svg{animation:drive 2.2s ease-in-out infinite}
+
+/* reading a PO: scanning beam */
+#pvbox{position:relative}
+#pvbox.scanning:before{content:"";position:absolute;inset:0;z-index:2;background:linear-gradient(180deg,#4a4fd022,transparent 60%);border-radius:10px;pointer-events:none}
+#pvbox.scanning:after{content:"";position:absolute;left:0;right:0;height:4px;z-index:3;background:linear-gradient(90deg,transparent,#4a4fd0,#e31e24,#4a4fd0,transparent);box-shadow:0 0 22px 4px #4a4fd099;animation:scan 1.7s ease-in-out infinite;pointer-events:none}
+.flash{animation:fillflash 1.1s ease both}
+
+/* order progress steps */
+.stepper{position:relative;display:grid;grid-template-columns:repeat(4,1fr);margin:4px 0 14px}
+.stp-line{position:absolute;left:12.5%;right:12.5%;top:15px;height:4px;background:#e6e8f2;border-radius:4px;overflow:hidden}
+.stp-line i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--blue2),var(--red));transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+.stp{text-align:center;position:relative}
+.stp span{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;margin:0 auto 6px;background:#fff;border:3px solid #dfe2f5;font-weight:700;color:var(--mut);position:relative;z-index:1;transition:background .5s .3s,border-color .5s .3s,color .4s .3s}
+.stp.done span{background:var(--blue);border-color:var(--blue);color:#fff}
+.stp.cur span{border-color:var(--blue2);color:var(--blue);animation:ringp 1.9s infinite}
+.stp small{font-size:12px;color:var(--mut);font-weight:600}
+.stp.cur small,.stp.done small{color:var(--ink)}
 </style>
 </head>
 <body>
@@ -339,6 +397,15 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue2)}
     <div class="lcard"><img class="logo big" alt="Selmex"></div>
     <h1>Every order, from enquiry to delivery.</h1>
     <p>One place where sales and production see the same orders, live.</p>
+        <svg class="flow" viewBox="0 0 480 140" aria-hidden="true">
+      <path id="trk" d="M40 70 C 120 6, 190 134, 240 70 S 380 6, 440 70" fill="none" stroke="#ffffff55" stroke-width="2.5" stroke-dasharray="3 9" stroke-linecap="round"/>
+      <g fill="#fff"><circle cx="40" cy="70" r="9"><animate attributeName="r" values="15;9;9;9;9;9;15" dur="6s" repeatCount="indefinite"/></circle>
+        <circle cx="240" cy="70" r="9"><animate attributeName="r" values="9;9;15;9;9" keyTimes="0;.42;.5;.58;1" dur="6s" repeatCount="indefinite"/></circle>
+        <circle cx="440" cy="70" r="9"><animate attributeName="r" values="9;9;15" keyTimes="0;.88;1" dur="6s" repeatCount="indefinite"/></circle></g>
+      <g fill="#fff" font-size="12" font-weight="600" text-anchor="middle" opacity=".9"><text x="40" y="104">Order</text><text x="240" y="104">Production</text><text x="440" y="104">Dispatch</text></g>
+      <g><rect x="-10" y="-10" width="20" height="20" rx="5" fill="#ff5a60"/><rect x="-4" y="-4" width="8" height="8" rx="2" fill="#fff"/>
+        <animateMotion dur="6s" repeatCount="indefinite" rotate="0" keyPoints="0;1" keyTimes="0;1" calcMode="linear"><mpath href="#trk"/></animateMotion></g>
+    </svg>
     <ul class="lfeat"><li>Live order status for every team</li><li>PO upload that fills the form for you</li><li>Daily summary for Management</li></ul></div>
   <div class="lform"><div class="box">
     <h2>Welcome back</h2><p class="sub">Sign in to continue</p>
@@ -429,6 +496,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue2)}
 <div id="holder" class="hide"><div id="updbox">
   <div class="dh"><div><b id="dtitle"></b><small id="dsub"></small></div><button class="ib" id="dclose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
   <div class="db">
+    <div id="dstep" class="stepper"></div>
     <h3>Items and progress</h3><div id="ditems"></div>
     <div id="dform">
       <h3>Add an update</h3>
@@ -446,6 +514,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue2)}
   <div class="pvbar"><b>Original file</b><div id="pvtools"><button id="zout" type="button" aria-label="Zoom out">&minus;</button><button id="zin" type="button" aria-label="Zoom in">+</button><button id="zfit" type="button">Fit</button></div><button id="zclose" type="button">Close</button></div>
   <div class="pvstage" id="pvstage"></div>
 </div>
+<div id="splash"><div class="spl-card"><div class="lcard"><img class="logo big" alt="Selmex"></div><div class="ring"></div><p>Preparing your dashboard</p><div class="spl-bar"><i></i></div></div></div>
 <div id="topbar"></div>
 <div id="toast" role="status"></div>
 
@@ -499,6 +568,10 @@ const matches = (o, q) => !q || [o.po_id, o.company_name, o.assigned_employee].j
 function toast(t) { const e = $("toast"); e.textContent = t; e.classList.add("show"); setTimeout(() => e.classList.remove("show"), 2800); }
 
 // ---- sign in ----
+async function splashRun(fn) {          // short animated screen while the dashboard loads
+  const sp = $("splash"), t0 = Date.now(); sp.classList.add("on");
+  try { await fn(); } finally { setTimeout(() => sp.classList.remove("on"), Math.max(0, 750 - (Date.now() - t0))); }
+}
 async function boot() {
   if (!db) { $("login").classList.remove("hide"); $("go").disabled = true; $("lmsg").textContent = "Setup missing: open config.js and add your Supabase key."; return; }
   if (sessionStorage.getItem("selmex_signedout")) {            // just signed out: always show the sign-in screen
@@ -507,7 +580,7 @@ async function boot() {
     return;
   }
   const { data } = await db.auth.getSession();
-  if (data.session) start(data.session.user.email); else $("login").classList.remove("hide");
+  if (data.session) await splashRun(() => start(data.session.user.email)); else $("login").classList.remove("hide");
 }
 const shake = () => { const bx = document.querySelector("#login .box"); bx.classList.remove("shake"); void bx.offsetWidth; bx.classList.add("shake"); };
 $("go").onclick = async () => {
@@ -518,7 +591,7 @@ $("go").onclick = async () => {
   btn.disabled = false; btn.textContent = "Sign in";
   if (error) { $("lmsg").textContent = "Sign in failed: " + error.message; shake(); return; }
   $("login").classList.add("leaving");
-  setTimeout(async () => { await start(data.user.email); $("login").classList.remove("leaving"); }, 300);
+  setTimeout(async () => { await splashRun(() => start(data.user.email)); $("login").classList.remove("leaving"); }, 300);
 };
 $("pwt").onclick = () => { const on = $("pw").type === "password"; $("pw").type = on ? "text" : "password"; $("pwt").setAttribute("aria-label", on ? "Hide password" : "Show password"); $("pwt").classList.toggle("on", on); };
 $("pw").addEventListener("keyup", e => { $("caps").classList.toggle("hide", !(e.getModifierState && e.getModifierState("CapsLock"))); });
@@ -703,6 +776,20 @@ $("olist").onclick = async e => {
 };
 
 // ---- production / management: change item status ----
+let celebrateNext = false;
+function celebrate() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const c = document.createElement("canvas"); c.width = innerWidth; c.height = innerHeight;
+  c.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:300"; document.body.appendChild(c);
+  const x = c.getContext("2d"), cols = ["#2e3192", "#4a4fd0", "#e31e24", "#ffb020", "#12a150", "#7c83ff"];
+  const P = Array.from({ length: 110 }, () => ({ x: c.width / 2 + (Math.random() - .5) * 200, y: c.height * .38, vx: (Math.random() - .5) * 15, vy: -Math.random() * 15 - 4, s: 6 + Math.random() * 6, r: Math.random() * 6, vr: (Math.random() - .5) * .4, col: cols[(Math.random() * cols.length) | 0] }));
+  const t0 = performance.now();
+  (function f(t) {
+    const el = t - t0; x.clearRect(0, 0, c.width, c.height);
+    P.forEach(p => { p.vy += .36; p.x += p.vx; p.y += p.vy; p.vx *= .99; p.r += p.vr; x.save(); x.translate(p.x, p.y); x.rotate(p.r); x.globalAlpha = Math.max(0, 1 - el / 2300); x.fillStyle = p.col; x.fillRect(-p.s / 2, -p.s / 3, p.s, p.s * .6); x.restore(); });
+    if (el < 2300) requestAnimationFrame(f); else c.remove();
+  })(t0);
+}
 const onItemChange = async e => {
   const sel = e.target.closest("select[data-item]"); if (!sel) return;
   if (!canUpd()) { toast("You can't change status"); return; }
@@ -718,10 +805,11 @@ const onItemChange = async e => {
     const upd = { status: os, completed_at: fin ? (o.completed_at || now) : null, dispatched_at: os === "Dispatched" ? now : null };
     let r = await db.from("orders").update(upd).eq("id", o.id);
     if (r.error) r = await db.from("orders").update({ status: os }).eq("id", o.id);
-    if (!r.error) { o.status = os; o.completed_at = upd.completed_at; o.dispatched_at = upd.dispatched_at; }
+    if (!r.error) { o.status = os; o.completed_at = upd.completed_at; o.dispatched_at = upd.dispatched_at; if (os === "Completed" || os === "Dispatched") celebrateNext = true; }
   }
   await db.from("activity_log").insert({ order_id: o.id, action: `${it.item_description} marked ${status}`, done_by: me.name });
   toast("Saved"); renderDash(); renderOrders(); if (updId) drawItems();
+  if (celebrateNext) { celebrateNext = false; celebrate(); }
 };
 
 // ---- inline panels (Update / Track / Edit open under the order row) ----
@@ -750,6 +838,10 @@ function drawItems() {
   const o = orders.find(x => x.id === updId); if (!o) return;
   $("dtitle").textContent = o.po_id + " · " + o.company_name;
   $("dsub").textContent = "Placed by " + title(o.assigned_employee) + " · Ordered " + fmt(o.order_date) + " · Delivery " + fmt(o.delivery_date);
+  const S = ["Pending", "In Production", "Completed", "Dispatched"], si = Math.max(0, S.indexOf(o.status)), all = si === 3;
+  $("dstep").innerHTML = `<div class="stp-line"><i></i></div>` + S.map((nm, k) => `<div class="stp ${k < si || all ? "done" : k === si ? "cur" : ""}"><span>${k < si || all ? "\u2713" : k + 1}</span><small>${nm}</small></div>`).join("");
+  const sf = $("dstep").querySelector(".stp-line i");
+  requestAnimationFrame(() => requestAnimationFrame(() => { sf.style.width = (si / 3 * 100) + "%"; }));
   const its = items.filter(i => i.order_id === updId);
   $("ditems").innerHTML = its.map(i => `<div class="di"><div><b>${esc(i.item_description)}</b><small>${[i.micron, i.size].filter(Boolean).map(esc).join(" · ")}${i.micron || i.size ? " · " : ""}${esc(i.quantity)} ${esc(i.unit || "")}${canRate() && i.rate != null ? " · " + money(i.rate) + " each" : ""}</small></div>` +
     (canUpd() ? `<select data-item="${i.id}" aria-label="Item status">${ISTAT.map(x => `<option${x === i.item_status ? " selected" : ""}>${x}</option>`).join("")}</select>` : badge(i.item_status || "Pending")) + `</div>`).join("") || '<p class="empty">No items</p>';
@@ -1063,6 +1155,10 @@ function applyExtract(x) {
     if (!unit) row.querySelector(".u").classList.add("warn");
     if (!i.item_description) row.querySelector(".d").classList.add("warn");
   });
+  [...document.querySelectorAll("#co,#po,#od,#dd,#irows input,#irows textarea")].filter(el => el.value).forEach((el, k) => {
+    el.classList.remove("flash"); void el.offsetWidth; el.style.animationDelay = Math.min(k, 24) * 55 + "ms"; el.classList.add("flash");
+    el.addEventListener("animationend", () => { el.classList.remove("flash"); el.style.animationDelay = ""; }, { once: true });
+  });
   return list.length;
 }
 document.addEventListener("input", e => { if (e.target.closest && e.target.closest(".irow") && e.target.tagName === "INPUT") e.target.title = e.target.value;
@@ -1075,14 +1171,14 @@ async function handleFile(file) {
   $("save").disabled = true;
   try {
     const p = await prepFile(file);
-    pendingFile = p; setPreview(p);
+    pendingFile = p; setPreview(p); $("pvbox").classList.add("scanning");
     const x = await extractFrom(p);
     const n = applyExtract(x);
     setStat("ok", `Found ${n} item${n === 1 ? "" : "s"}. Check the form below. ` + (document.querySelectorAll("#new .warn").length ? document.querySelectorAll("#new .warn").length + " highlighted field(s) need checking against the original file." : "Nothing looks doubtful, but please still check.") + (x.notes ? " Note: " + esc(x.notes) : "") +
       ' <button class="alt sm" id="rmfile" type="button">Remove file</button>');
   } catch (e) {
     setStat("err", "Could not read the file: " + esc(e.message) + ". You can still fill the form by hand." + (pendingFile ? ' <button class="alt sm" id="rmfile" type="button">Remove file</button>' : ""));
-  } finally { $("save").disabled = false; $("fpick").value = ""; $("fsnap").value = ""; }
+  } finally { $("pvbox").classList.remove("scanning"); $("save").disabled = false; $("fpick").value = ""; $("fsnap").value = ""; }
 }
 $("pick").onclick = () => $("fpick").click();
 let camStream = null;
