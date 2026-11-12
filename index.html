@@ -389,9 +389,9 @@ body:after{width:460px;height:460px;right:-140px;bottom:-120px;background:#e31e2
 .stp.cur small,.stp.done small{color:var(--ink)}
 
 /* ===================== note + smooth scroll ===================== */
-.note{color:#000;font-weight:700;font-size:12.5px;line-height:1.4;overflow-wrap:break-word}
-.og td.cm{min-width:200px;max-width:340px}
-.dh small .note,#dsub .note{color:#000;font-size:12.5px;font-weight:700;display:inline}
+.note{display:block;margin-top:3px;color:#000;font-weight:700;font-size:12.5px;line-height:1.4;overflow-wrap:break-word}
+.og td.cm{min-width:230px;max-width:380px}
+.dh small .note,#dsub .note{color:#000;font-size:12.5px;font-weight:700;display:block;margin-top:3px}
 .notep textarea{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;font-size:15px;line-height:1.45;resize:vertical;min-height:84px;background:#fff}
 .cnt2{text-align:right;font-size:12px;color:var(--mut);margin-top:4px}
 .opt{font-weight:500;color:var(--mut);font-size:14px}
@@ -578,7 +578,7 @@ const canRate = () => me && (me.role === "Sales" || me.role === "Management");
 const money = n => "₹" + Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 });
 let rateCol = false, noteCol = false;
 const noteField = () => { const v = $("note").value.trim(); return v ? { note: v } : (noteCol ? { note: null } : {}); };
-const noteHtml = o => o.note ? ` <b class="note">(${esc(o.note)})</b>` : "";
+const noteHtml = o => o.note ? `<b class="note">(${esc(o.note)})</b>` : "";
 const rateField = x => (x.rate !== "" && x.rate != null) ? { rate: Number(x.rate) } : (rateCol ? { rate: null } : {});
 const canUpd = () => me && (me.role === "Production" || me.role === "Management");
 // Management can edit any order. Sales can edit their own orders until they are completed.
@@ -711,7 +711,7 @@ function ordTable(list, full) {
   let n = 0;
   const body = list.map(o => {
     const its = items.filter(i => i.order_id === o.id), rs = Math.max(its.length, 1), r = ` rowspan="${rs}"`;
-    const first = `<td${r} class="oc"><b>${esc(o.po_id)}</b><small>${fmt(o.order_date)}</small></td><td${r} class="cm">${esc(o.company_name)}<small class="mi">${esc(title(o.assigned_employee))}${noteHtml(o)}</small></td>`;
+    const first = `<td${r} class="oc"><b>${esc(o.po_id)}</b><small>${fmt(o.order_date)}</small></td><td${r} class="cm">${esc(o.company_name)}<small class="mi">${esc(title(o.assigned_employee))}</small>${noteHtml(o)}</td>`;
     const last = `<td${r} class="nw">${fmt(o.delivery_date)}${isOverdue(o) ? '<br><span class="b late">Overdue</span>' : ""}</td><td${r}>${badge(o.status)}</td>` +
       (full ? `<td${r} class="act"><button class="pri sm" data-upd="${o.id}" type="button">${canUpd() ? "Update" : "Track"}</button>${canEdit(o) ? `<button class="alt sm" data-edit="${o.id}" type="button">Edit</button>` : ""}</td>` : "");
     const rows = (its.length ? its : [{}]).map((it, k) => `<tr>${k ? "" : first}${cells(it)}${k ? "" : last}</tr>`).join("");
@@ -870,7 +870,7 @@ $("olist").onchange = onItemChange; $("updbox").onchange = onItemChange;
 function drawItems() {
   const o = orders.find(x => x.id === updId); if (!o) return;
   $("dtitle").textContent = o.po_id + " · " + o.company_name;
-  $("dsub").innerHTML = esc("Placed by " + title(o.assigned_employee) + " · Ordered " + fmt(o.order_date) + " · Delivery " + fmt(o.delivery_date)) + (o.note ? "<br>" + noteHtml(o) : "");
+  $("dsub").innerHTML = esc("Placed by " + title(o.assigned_employee) + " · Ordered " + fmt(o.order_date) + " · Delivery " + fmt(o.delivery_date)) + noteHtml(o);
   const S = ["Pending", "In Production", "Completed", "Dispatched"], si = Math.max(0, S.indexOf(o.status)), all = si === 3;
   $("dstep").innerHTML = `<div class="stp-line"><i></i></div>` + S.map((nm, k) => `<div class="stp ${k < si || all ? "done" : k === si ? "cur" : ""}"><span>${k < si || all ? "\u2713" : k + 1}</span><small>${nm}</small></div>`).join("");
   const sf = $("dstep").querySelector(".stp-line i");
