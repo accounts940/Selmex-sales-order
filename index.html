@@ -55,7 +55,7 @@ header.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:
 nav{display:flex;gap:6px;margin:18px auto 0;max-width:1480px;padding:0 24px;flex-wrap:wrap}
 nav button{background:#fff;color:var(--mut);border:1px solid var(--line);padding:9px 18px;border-radius:999px}
 nav button.on{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 6px 16px #2e319238}
-main{max-width:1480px;margin:0 auto;padding:18px 28px 56px}
+main{max-width:1480px;margin:0 auto;padding:18px 28px 104px}
 main>section{animation:in .3s ease}
 @keyframes in{from{opacity:0;transform:translateY(8px)}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -387,6 +387,29 @@ body:after{width:460px;height:460px;right:-140px;bottom:-120px;background:#e31e2
 .stp.cur span{border-color:var(--blue2);color:var(--blue);animation:ringp 1.9s infinite}
 .stp small{font-size:12px;color:var(--mut);font-weight:600}
 .stp.cur small,.stp.done small{color:var(--ink)}
+
+/* ===================== note + smooth scroll ===================== */
+.note{color:#000;font-weight:700;font-size:12.5px;line-height:1.4;overflow-wrap:break-word}
+.og td.cm{min-width:200px;max-width:340px}
+.dh small .note,#dsub .note{color:#000;font-size:12.5px;font-weight:700;display:inline}
+.notep textarea{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;font-size:15px;line-height:1.45;resize:vertical;min-height:84px;background:#fff}
+.cnt2{text-align:right;font-size:12px;color:var(--mut);margin-top:4px}
+.opt{font-weight:500;color:var(--mut);font-size:14px}
+html{scroll-behavior:smooth;scrollbar-gutter:stable;scroll-padding-top:90px}
+*{scrollbar-width:thin;scrollbar-color:#c3c7ee transparent}
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#c9ccf0;border-radius:10px;border:3px solid transparent;background-clip:padding-box;transition:background .2s}
+::-webkit-scrollbar-thumb:hover{background:#8f93e0;background-clip:padding-box}
+.scroll{scroll-behavior:smooth;overscroll-behavior-x:contain}
+#sprog{position:fixed;top:0;left:0;height:3px;width:0;z-index:190;background:linear-gradient(90deg,var(--blue),var(--blue2),var(--red));transition:width .12s linear;pointer-events:none}
+#totop{position:fixed;right:22px;bottom:22px;width:48px;height:48px;border-radius:50%;padding:0;display:grid;place-items:center;background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;box-shadow:0 10px 26px #2e319255;opacity:0;transform:translateY(18px) scale(.8);pointer-events:none;transition:opacity .3s,transform .4s cubic-bezier(.3,1.4,.5,1);z-index:60}
+#totop.show{opacity:1;transform:none;pointer-events:auto}
+#totop.show:hover{transform:translateY(-4px)}
+header.top{transition:box-shadow .3s}
+header.top.scrolled{box-shadow:0 12px 32px #1b1f4a22}
+.rv{opacity:0;transform:translateY(28px);animation:none!important}
+.rv.rv-in{opacity:1;transform:none;transition:opacity .6s ease,transform .65s cubic-bezier(.2,.8,.2,1)}
 </style>
 </head>
 <body>
@@ -484,6 +507,12 @@ body:after{width:460px;height:460px;right:-140px;bottom:-120px;background:#e31e2
             <div class="scroll"><table class="itb"><thead><tr><th>Item description</th><th>Micron (in words)</th><th>Size</th><th>Quantity</th><th>Unit</th><th class="rt">Rate / unit (optional)</th><th></th></tr></thead><tbody id="irows"></tbody></table></div>
             <p><button class="alt" id="addrow" type="button">Add item</button></p>
           </div>
+          <div class="panel notep">
+            <h2>Note <span class="opt">(optional)</span></h2>
+            <p class="hint">Other details, delivery location, contact person, special instructions. It is shown under the sales person's name in the order list.</p>
+            <textarea id="note" maxlength="400" rows="3" placeholder="e.g. Deliver to Okhla Phase 2, call the store manager before dispatch"></textarea>
+            <div class="cnt2"><span id="notecnt">0</span> / 400</div>
+          </div>
           <button id="save">Save order</button><button id="cancel" class="alt hide" type="button">Cancel</button>
           <div class="msg" id="nmsg" role="alert"></div>
           </div>
@@ -514,6 +543,8 @@ body:after{width:460px;height:460px;right:-140px;bottom:-120px;background:#e31e2
   <div class="pvbar"><b>Original file</b><div id="pvtools"><button id="zout" type="button" aria-label="Zoom out">&minus;</button><button id="zin" type="button" aria-label="Zoom in">+</button><button id="zfit" type="button">Fit</button></div><button id="zclose" type="button">Close</button></div>
   <div class="pvstage" id="pvstage"></div>
 </div>
+<div id="sprog"></div>
+<button id="totop" type="button" aria-label="Back to top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
 <div id="splash"><div class="spl-card"><div class="lcard"><img class="logo big" alt="Selmex"></div><div class="ring"></div><p>Preparing your dashboard</p><div class="spl-bar"><i></i></div></div></div>
 <div id="topbar"></div>
 <div id="toast" role="status"></div>
@@ -545,7 +576,9 @@ const badge = s => `<span class="b ${String(s).replace(/\s/g, "").toLowerCase()}
 const canNew = () => me && (me.role === "Sales" || me.role === "Management");
 const canRate = () => me && (me.role === "Sales" || me.role === "Management");
 const money = n => "₹" + Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 });
-let rateCol = false;
+let rateCol = false, noteCol = false;
+const noteField = () => { const v = $("note").value.trim(); return v ? { note: v } : (noteCol ? { note: null } : {}); };
+const noteHtml = o => o.note ? ` <b class="note">(${esc(o.note)})</b>` : "";
 const rateField = x => (x.rate !== "" && x.rate != null) ? { rate: Number(x.rate) } : (rateCol ? { rate: null } : {});
 const canUpd = () => me && (me.role === "Production" || me.role === "Management");
 // Management can edit any order. Sales can edit their own orders until they are completed.
@@ -563,7 +596,7 @@ const recent = d => Date.now() - new Date(d) < 2 * 864e5;   // within the last 2
 // A dispatched order leaves the dashboard this many days after it was marked Dispatched (it stays in the Orders tab).
 const DISPATCH_KEEP_DAYS = 4;
 const within = (d, days) => Date.now() - new Date(d) < days * 864e5;
-const matches = (o, q) => !q || [o.po_id, o.company_name, o.assigned_employee].join(" ").toLowerCase().includes(q) ||
+const matches = (o, q) => !q || [o.po_id, o.company_name, o.assigned_employee, o.note].join(" ").toLowerCase().includes(q) ||
   items.some(i => i.order_id === o.id && (i.item_description || "").toLowerCase().includes(q));
 function toast(t) { const e = $("toast"); e.textContent = t; e.classList.add("show"); setTimeout(() => e.classList.remove("show"), 2800); }
 
@@ -655,7 +688,7 @@ async function loadData() {
     }
     return x;
   });
-  items = i.data; rateCol = items.length > 0 && "rate" in items[0];
+  items = i.data; rateCol = items.length > 0 && "rate" in items[0]; noteCol = o.data.length > 0 && "note" in o.data[0];
   renderDash(); renderOrders();
 }
 
@@ -678,7 +711,7 @@ function ordTable(list, full) {
   let n = 0;
   const body = list.map(o => {
     const its = items.filter(i => i.order_id === o.id), rs = Math.max(its.length, 1), r = ` rowspan="${rs}"`;
-    const first = `<td${r} class="oc"><b>${esc(o.po_id)}</b><small>${fmt(o.order_date)}</small></td><td${r}>${esc(o.company_name)}<small class="mi">${esc(title(o.assigned_employee))}</small></td>`;
+    const first = `<td${r} class="oc"><b>${esc(o.po_id)}</b><small>${fmt(o.order_date)}</small></td><td${r} class="cm">${esc(o.company_name)}<small class="mi">${esc(title(o.assigned_employee))}${noteHtml(o)}</small></td>`;
     const last = `<td${r} class="nw">${fmt(o.delivery_date)}${isOverdue(o) ? '<br><span class="b late">Overdue</span>' : ""}</td><td${r}>${badge(o.status)}</td>` +
       (full ? `<td${r} class="act"><button class="pri sm" data-upd="${o.id}" type="button">${canUpd() ? "Update" : "Track"}</button>${canEdit(o) ? `<button class="alt sm" data-edit="${o.id}" type="button">Edit</button>` : ""}</td>` : "");
     const rows = (its.length ? its : [{}]).map((it, k) => `<tr>${k ? "" : first}${cells(it)}${k ? "" : last}</tr>`).join("");
@@ -837,7 +870,7 @@ $("olist").onchange = onItemChange; $("updbox").onchange = onItemChange;
 function drawItems() {
   const o = orders.find(x => x.id === updId); if (!o) return;
   $("dtitle").textContent = o.po_id + " · " + o.company_name;
-  $("dsub").textContent = "Placed by " + title(o.assigned_employee) + " · Ordered " + fmt(o.order_date) + " · Delivery " + fmt(o.delivery_date);
+  $("dsub").innerHTML = esc("Placed by " + title(o.assigned_employee) + " · Ordered " + fmt(o.order_date) + " · Delivery " + fmt(o.delivery_date)) + (o.note ? "<br>" + noteHtml(o) : "");
   const S = ["Pending", "In Production", "Completed", "Dispatched"], si = Math.max(0, S.indexOf(o.status)), all = si === 3;
   $("dstep").innerHTML = `<div class="stp-line"><i></i></div>` + S.map((nm, k) => `<div class="stp ${k < si || all ? "done" : k === si ? "cur" : ""}"><span>${k < si || all ? "\u2713" : k + 1}</span><small>${nm}</small></div>`).join("");
   const sf = $("dstep").querySelector(".stp-line i");
@@ -920,7 +953,7 @@ function resetForm() {
   editing = null; removedIds = [];
   clearUpload(); $("uppanel").classList.remove("hide");
   setEmpOptions();
-  $("po").value = ""; $("co").value = ""; $("dd").value = ""; $("od").value = today();
+  $("po").value = ""; $("co").value = ""; $("dd").value = ""; $("od").value = today(); $("note").value = ""; $("notecnt").textContent = "0";
   $("irows").innerHTML = ""; addRow(); addRow();
   $("ftitle").textContent = "New sales order";
   $("save").textContent = "Save order";
@@ -934,6 +967,7 @@ function startEdit(id) {
   editing = id;
   $("po").value = o.po_id || ""; $("co").value = o.company_name || "";
   $("od").value = o.order_date || ""; $("dd").value = o.delivery_date || "";
+  $("note").value = o.note || ""; $("notecnt").textContent = $("note").value.length; setTimeout(() => fit($("note")), 120);
   if (me.role === "Management") {
     const nm = title(o.assigned_employee);
     if (nm && ![...$("emp").options].some(x => x.value === nm || x.text === nm)) $("emp").add(new Option(nm, nm));
@@ -992,7 +1026,7 @@ async function saveNew(po, co, empName, salesPhone, rows) {
   const dup = await db.from("orders").select("id").eq("po_id", po).limit(1);
   if (!dup.error && dup.data && dup.data.length && !confirm(`An order with PO "${po}" already exists. Save another one anyway?`)) return;
   const { data: o, error } = await db.from("orders").insert({
-    po_id: po, company_name: co, assigned_employee: empName, sales_phone: salesPhone || null,
+    po_id: po, company_name: co, assigned_employee: empName, sales_phone: salesPhone || null, ...noteField(),
     status: "Pending", order_date: $("od").value, delivery_date: $("dd").value || null
   }).select().single();
   if (error) { msg.textContent = "Order not saved: " + error.message; return; }
@@ -1005,7 +1039,7 @@ async function saveNew(po, co, empName, salesPhone, rows) {
 async function saveEdit(po, co, empName, salesPhone, rows, del) {
   const msg = $("nmsg"), id = editing;
   const fail = async t => { msg.textContent = t; await load(); };
-  const upd = { po_id: po, company_name: co, order_date: $("od").value, delivery_date: $("dd").value || null };
+  const upd = { po_id: po, company_name: co, order_date: $("od").value, delivery_date: $("dd").value || null, ...noteField() };
   if (me.role === "Management") { upd.assigned_employee = empName; upd.sales_phone = salesPhone || null; }
   const r = await db.from("orders").update(upd).eq("id", id).select();
   if (r.error || !r.data.length) { return fail("Order not updated: " + (r.error ? r.error.message : "you don't have permission, or the order is already completed.")); }
@@ -1265,6 +1299,28 @@ document.addEventListener("pointerdown", e => {
   sp.className = "rip"; sp.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`;
   b.appendChild(sp); setTimeout(() => sp.remove(), 600);
 });
+
+$("note").addEventListener("input", () => { $("notecnt").textContent = $("note").value.length; fit($("note")); });
+
+
+// ---- smooth scrolling: progress line, back-to-top, reveal on scroll ----
+(function () {
+  const sp = $("sprog"), tt = $("totop"), hd = document.querySelector("header.top"); let tick = false;
+  const upd = () => { tick = false; const y = scrollY, h = document.documentElement.scrollHeight - innerHeight;
+    sp.style.width = (h > 0 ? y / h * 100 : 0) + "%"; tt.classList.toggle("show", y > 520); if (hd) hd.classList.toggle("scrolled", y > 8); };
+  addEventListener("scroll", () => { if (!tick) { tick = true; requestAnimationFrame(upd); } }, { passive: true });
+  tt.onclick = () => scrollTo({ top: 0, behavior: "smooth" });
+  const io = "IntersectionObserver" in window ? new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("rv-in"); io.unobserve(e.target); } }), { threshold: .06, rootMargin: "0px 0px -5% 0px" }) : null;
+  window.armReveal = () => {
+    if (!io || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    document.querySelectorAll("#secs .sec, #olist tbody:not(.inl), #olist .ghead").forEach(el => {
+      if (el.classList.contains("rv") || el.getBoundingClientRect().top < innerHeight) return;
+      el.classList.add("rv"); io.observe(el);
+    });
+  };
+  const wrap = f => function () { const r = f.apply(this, arguments); armReveal(); return r; };
+  renderDash = wrap(renderDash); renderOrders = wrap(renderOrders);
+})();
 
 // ---- tabs ----
 function show(t) {
