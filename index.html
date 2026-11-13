@@ -776,7 +776,7 @@ async function loadData(opts) {
     if (x.status === "Pending" || x.status === "In Production" || x.status === "Completed") {      // an order follows its items
       const st = i.data.filter(y => y.order_id === x.id).map(y => y.item_status || "Pending");
       if (st.length) { const ds = derive(st);
-        if (ds !== x.status) { const back = x.status === "Completed" && ds !== "Completed" && ds !== "Dispatched"; x = { ...x, status: ds }; if (back) x.completed_at = null; if (canUpd()) db.from("orders").update(back ? { status: ds, completed_at: null } : { status: ds }).eq("id", x.id).then(() => {}); } }
+        if (ds !== x.status) { const back = x.status === "Completed" && ds !== "Completed" && ds !== "Dispatched"; x = { ...x, status: ds }; if (back) x.completed_at = null; if (canUpd()) db.from("orders").update(back ? { status: ds, completed_at: null } : { status: ds }).eq("id", x.id).then(r => { if (r.error && back) db.from("orders").update({ status: ds }).eq("id", x.id).then(() => {}); }); } }
     }
     return x;
   });
@@ -933,7 +933,10 @@ const onItemChange = async e => {
     const upd = { status: os, completed_at: fin ? (o.completed_at || now) : null, dispatched_at: os === "Dispatched" ? now : null };
     let r = await db.from("orders").update(upd).eq("id", o.id);
     if (r.error) r = await db.from("orders").update({ status: os }).eq("id", o.id);
-    if (!r.error) { o.status = os; o.completed_at = upd.completed_at; o.dispatched_at = upd.dispatched_at; if (os === "Completed" || os === "Dispatched") celebrateNext = true; }
+    // the order always follows its items on screen, even if the database refuses the write
+    o.status = os; o.completed_at = upd.completed_at; o.dispatched_at = upd.dispatched_at;
+    if (r.error) toast("Item saved, but order status could not be saved: " + r.error.message);
+    else if (os === "Completed" || os === "Dispatched") celebrateNext = true;
   }
   await db.from("activity_log").insert({ order_id: o.id, action: `${it.item_description} marked ${status}`, done_by: me.name });
   toast("Saved"); renderDash(); renderOrders(); if (updId) drawItems();
