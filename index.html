@@ -410,6 +410,79 @@ header.top{transition:box-shadow .3s}
 header.top.scrolled{box-shadow:0 12px 32px #1b1f4a22}
 .rv{opacity:0;transform:translateY(28px);animation:none!important}
 .rv.rv-in{opacity:1;transform:none;transition:opacity .6s ease,transform .65s cubic-bezier(.2,.8,.2,1)}
+
+/* ===================== chart + smoothness ===================== */
+:root{--ease:cubic-bezier(.22,.8,.2,1)}
+html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+/* entrance animations only while a screen opens */
+.kpi,.panel.sec,.og tbody,.ghead{animation:none}
+.enter .kpi{animation:rise .55s var(--ease) both}
+.enter .panel.sec{animation:rise .5s var(--ease) both}
+.enter .og tbody{animation:rowin .42s var(--ease) both;animation-delay:calc(var(--i,0)*40ms)}
+.enter .ghead{animation:in .3s ease both}
+.enter.chartcard{animation:rise .6s var(--ease) both}
+#totop,#sprog,#topbar{will-change:transform}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.26s;animation-timing-function:var(--ease)}
+.panel,.kpi,button,.srch,.lg{transition-timing-function:var(--ease)}
+
+.dtop{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,520px);gap:20px;align-items:start;margin-bottom:6px}
+.dleft{min-width:0}.dleft .hello{margin-top:8px}
+.chartcard{margin:0;padding:16px 20px}
+.ch-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.ch-h b{font-size:15px}
+.ch-tabs{display:flex;gap:6px;align-items:center}
+.ch-tabs button,.ch-tabs .datebtn{position:relative;background:#eef0fb;color:var(--blue);border-radius:99px;padding:5px 13px;font-size:12.5px;font-weight:600;border:0;box-shadow:none;cursor:pointer;transition:background .25s,color .25s,transform .2s}
+.ch-tabs button:hover,.ch-tabs .datebtn:hover{background:#e0e3fb;transform:translateY(-1px)}
+.ch-tabs button.on,.ch-tabs .datebtn.on{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff}
+.datebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.ch-b{display:flex;align-items:center;gap:20px}
+.donut{position:relative;width:150px;height:150px;flex:none}
+.donut svg{width:150px;height:150px;fill:none;stroke:none}
+.ring-bg{fill:none;stroke:#eef0fb;stroke-width:17}
+.seg{fill:none;stroke-width:17;stroke-linecap:round;cursor:pointer;transition:stroke-dasharray 1s var(--ease),stroke-dashoffset 1s var(--ease),stroke-width .25s var(--ease),opacity .3s}
+.seg.hl{stroke-width:21}
+.chartcard.hovering .seg:not(.hl){opacity:.3}
+.dc{position:absolute;inset:0;display:grid;place-content:center;text-align:center;pointer-events:none}
+.dc b{font-size:30px;font-weight:800;line-height:1;color:var(--ink,#1b1f3b)}
+.dc span{font-size:11.5px;color:var(--mut);margin-top:4px}
+.chleg{flex:1;min-width:0}
+.chartcard .lg{display:flex;align-items:center;gap:10px;width:100%;padding:7px 8px;margin:0;background:transparent;color:inherit;border:0;border-bottom:1px solid #f0f1f8;border-radius:8px;box-shadow:none;font-size:14px;font-weight:500;text-align:left;cursor:pointer;transition:background .2s,transform .25s var(--ease)}
+.chartcard .lg:hover,.chartcard .lg.hl{background:#f3f4ff;transform:translateX(3px)}
+.lg i{width:11px;height:11px;border-radius:50%;flex:none}
+.lg span{flex:1}.lg b{font-weight:800}
+.lg em{font-style:normal;color:var(--mut);font-size:12.5px;width:40px;text-align:right}
+.ch-empty{margin:10px 8px 0;color:var(--mut);font-size:13px}
+@media(max-width:1000px){.dtop{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:520px){.ch-b{flex-direction:column;align-items:stretch}.donut{margin:0 auto}}
+
+/* live indicator */
+.live{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--mut);margin-right:2px}
+.live i{width:8px;height:8px;border-radius:50%;background:#12a150;color:#12a150;animation:pulse 2.2s infinite}
+@media(max-width:760px){#livet{display:none}}
+.ib.busy svg{animation:spinr .8s linear infinite}
+.live i{animation:none;background:#9aa0b8;color:#9aa0b8}
+
+/* ===================== calm + smooth pass ===================== */
+/* 1. Background colour blobs: still (no endless drifting / heavy blur repaint) */
+body:before,body:after{animation:none!important;filter:none;will-change:auto;
+  background:radial-gradient(closest-side,#4a4fd01f,transparent)}
+body:after{background:radial-gradient(closest-side,#e31e2414,transparent)}
+/* 2. Same icon animations, but they play a couple of times and then rest */
+.kpi.k1 i svg,.kpi.k2 i svg,.kpi.k3 i svg,.kpi.k5 i svg,.kpi.k6 i svg{animation-iteration-count:2!important;animation-duration:3.2s!important}
+#hello b{animation:none!important;background-position:30% 50%}
+.stp.cur span{animation-iteration-count:3}
+.b.inproduction:before,.b.late:before{animation:none}
+.spl-card .lcard{animation-duration:3s}
+/* 3. Smoothness: GPU-friendly motion, cheaper blur, no layout jank */
+header.top{background:#fffffff2;-webkit-backdrop-filter:none;backdrop-filter:none}
+.kpi,.panel,.card,.og tbody,.lg,nav button,.chips button{backface-visibility:hidden;-webkit-font-smoothing:antialiased}
+.og tbody,.card,.panel{contain:layout paint}
+.card[open] .scroll,.scroll{-webkit-overflow-scrolling:touch}
+body{overflow-x:hidden}
+img,svg{image-rendering:auto}
+/* tab hidden or user idle: freeze every looping animation */
+html.rest *,html.rest *:before,html.rest *:after{animation-play-state:paused!important}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
@@ -444,6 +517,7 @@ header.top.scrolled{box-shadow:0 12px 32px #1b1f4a22}
     <div class="ttl">Order Tracker<small>Sales &amp; production</small></div>
     <div class="sp"></div>
     <div class="user"><span class="av" id="av"></span><div><b id="un"></b><small id="ur"></small></div></div>
+    <span class="live" id="live" title="When the data was last loaded. Press the refresh button to update it."><i></i><span id="livet">Live</span></span>
     <button class="ib" id="refresh" aria-label="Refresh data" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 11-3-6.7L21 8M21 3v5h-5"/></svg></button>
     <button class="ib" id="out" aria-label="Sign out" title="Sign out"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
   </header>
@@ -454,8 +528,13 @@ header.top.scrolled{box-shadow:0 12px 32px #1b1f4a22}
   </nav>
   <main>
     <section id="dash">
-      <p class="hello" id="hello"></p>
-      <div class="bar"><div class="srch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="dq" placeholder="Search PO ID, company, sales person or item" aria-label="Search dashboard orders"></div></div>
+      <div class="dtop"><div class="dleft"><p class="hello" id="hello"></p>
+      <div class="bar"><div class="srch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="dq" placeholder="Search PO ID, company, sales person or item" aria-label="Search dashboard orders"></div></div></div>
+      <div class="panel chartcard" id="chartcard" aria-label="Orders by status">
+        <div class="ch-h"><b id="chtitle">Orders placed today</b>
+          <div class="ch-tabs" id="chtabs"><button type="button" data-d="0" class="on">Today</button><button type="button" data-d="1">Yesterday</button><label class="datebtn" id="chdl">Pick a date<input type="date" id="chdate" aria-label="Pick a date"></label></div></div>
+        <div class="ch-b"><div class="donut"><svg viewBox="0 0 150 150" id="dsvg" aria-hidden="true"></svg><div class="dc"><b id="dtot">0</b><span id="dlbl">orders</span></div></div><div class="chleg" id="chleg"></div></div>
+      </div></div>
       <div class="kpis" id="kpis"></div>
       <div id="secs"></div>
     </section>
@@ -569,7 +648,8 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 // "MANJEET SINGH" -> "Manjeet Singh"
 const title = s => String(s ?? "").trim().toLowerCase().replace(/(^|[\s.'-])([a-z])/g, (m, a, b) => a + b.toUpperCase());
-const placedToday = o => { const t = today(); return o.order_date === t || (!!o.created_at && new Date(new Date(o.created_at).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) === t); };
+const placedOn = (o, t) => o.order_date === t || (!!o.created_at && new Date(new Date(o.created_at).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) === t);
+const placedToday = o => placedOn(o, today());
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 const fmt = d => d ? new Date(d + "T00:00:00").toLocaleDateString("en-GB", {day:"2-digit", month:"short", year:"numeric"}) : "-";
 const badge = s => `<span class="b ${String(s).replace(/\s/g, "").toLowerCase()}">${esc(s)}</span>`;
@@ -668,23 +748,35 @@ async function start(email) {
 
 // ---- data ----
 // Supabase RLS decides which rows come back: Sales = own orders, Production/Management = all.
-async function load() {
-  const bar = $("topbar"); bar.className = "on";
-  try { return await loadData(); } finally { bar.className = "done"; setTimeout(() => bar.className = "", 400); }
+let lastSig = "", firstLoad = true;
+async function load(opts) {
+  const silent = !!(opts && opts.silent), bar = $("topbar"), rb = $("refresh");
+  if (!silent) bar.className = "on";
+  rb.classList.add("busy");
+  try { return await loadData(opts); }
+  finally {
+    if (!silent) { bar.className = "done"; setTimeout(() => bar.className = "", 400); }
+    setTimeout(() => rb.classList.remove("busy"), 600);
+    $("livet").textContent = "Updated " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
 }
-async function loadData() {
+async function loadData(opts) {
   const [o, i] = await Promise.all([
     db.from("orders").select("*").order("created_at", { ascending: false }),
     db.from("order_items").select("*").order("id")
   ]);
   if (o.error || i.error) { toast("Could not load data: " + (o.error || i.error).message); return; }
+  const sig = JSON.stringify([o.data, i.data]);
+  if (opts && opts.silent && sig === lastSig) return;        // nothing changed: leave the screen alone
+  lastSig = sig;
+  if (firstLoad) { firstLoad = false; enterAnim(); }
   const derive = st => st.every(v => v === "Dispatched") ? "Dispatched" : st.every(v => v === "Done" || v === "Dispatched") ? "Completed" : st.some(v => v !== "Pending") ? "In Production" : "Pending";
   orders = o.data.map(x => {
     if (x.status === "Confirmed") x = { ...x, status: "Pending" };
-    if (x.status === "Pending" || x.status === "In Production") {      // open orders follow their items
+    if (x.status === "Pending" || x.status === "In Production" || x.status === "Completed") {      // an order follows its items
       const st = i.data.filter(y => y.order_id === x.id).map(y => y.item_status || "Pending");
       if (st.length) { const ds = derive(st);
-        if (ds !== x.status) { x = { ...x, status: ds }; if (canUpd()) db.from("orders").update({ status: ds }).eq("id", x.id).then(() => {}); } }
+        if (ds !== x.status) { const back = x.status === "Completed" && ds !== "Completed" && ds !== "Dispatched"; x = { ...x, status: ds }; if (back) x.completed_at = null; if (canUpd()) db.from("orders").update(back ? { status: ds, completed_at: null } : { status: ds }).eq("id", x.id).then(() => {}); } }
     }
     return x;
   });
@@ -701,7 +793,7 @@ const IC = {
   alert: '<path d="M12 9v4M12 17h.01M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/>'
 };
 const ico = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>`;
-let fstat = "", openSet = new Set(), onlyToday = false;
+let fstat = "", openSet = new Set(), onlyToday = false, onlyDay = null;
 
 function ordTable(list, full) {
   if (!list.length) return '<p class="empty">None</p>';
@@ -767,8 +859,8 @@ function renderOrders() {
   const q = $("q").value.toLowerCase(), cur = $("fsp").value, dt = $("fdt").value;
   const names = [...new Set(orders.map(o => o.assigned_employee).filter(Boolean))].sort();
   $("fsp").innerHTML = '<option value="">All</option>' + names.map(n => `<option value="${esc(n)}"${n === cur ? " selected" : ""}>${esc(title(n))}</option>`).join("");
-  const list = orders.filter(o => (!fstat || o.status === fstat) && (!onlyToday || placedToday(o)) && matches(o, q) && (!$("fsp").value || o.assigned_employee === $("fsp").value) && (!dt || o.delivery_date === dt));
-  $("ocount").textContent = list.length + " order" + (list.length === 1 ? "" : "s") + (onlyToday ? " placed today" : "");
+  const list = orders.filter(o => (!fstat || o.status === fstat) && (!onlyToday || placedToday(o)) && (!onlyDay || placedOn(o, onlyDay)) && matches(o, q) && (!$("fsp").value || o.assigned_employee === $("fsp").value) && (!dt || o.delivery_date === dt));
+  $("ocount").textContent = list.length + " order" + (list.length === 1 ? "" : "s") + (onlyToday ? " placed today" : onlyDay ? " placed on " + fmt(onlyDay) : "");
   const G = [
     ["Open orders", "Pending and in production", o => isOpen(o)],
     ["Completed", "Production finished, waiting to be dispatched", o => o.status === "Completed"],
@@ -781,7 +873,7 @@ function renderOrders() {
 }
 $("fsp").onchange = renderOrders; $("fdt").onchange = renderOrders;
 $("fclear").onclick = () => {
-  $("q").value = ""; $("fsp").value = ""; $("fdt").value = ""; fstat = ""; onlyToday = false;
+  $("q").value = ""; $("fsp").value = ""; $("fdt").value = ""; fstat = ""; onlyToday = false; onlyDay = null;
   document.querySelectorAll("#chips button").forEach(x => x.classList.toggle("on", x.dataset.s === ""));
   renderOrders();
 };
@@ -789,13 +881,13 @@ $("q").oninput = renderOrders;
 $("dq").oninput = renderDash;
 $("kpis").onclick = e => {
   const k = e.target.closest("[data-go]"); if (!k) return;
-  onlyToday = k.dataset.go === "Today"; fstat = onlyToday ? "" : k.dataset.go;
+  onlyToday = k.dataset.go === "Today"; onlyDay = null; fstat = onlyToday ? "" : k.dataset.go;
   document.querySelectorAll("#chips button").forEach(x => x.classList.toggle("on", x.dataset.s === fstat));
   renderOrders(); show("orders");
 };
 $("chips").onclick = e => {
   const b = e.target.closest("button[data-s]"); if (!b) return;
-  fstat = b.dataset.s; onlyToday = false;
+  fstat = b.dataset.s; onlyToday = false; onlyDay = null;
   document.querySelectorAll("#chips button").forEach(x => x.classList.toggle("on", x === b));
   renderOrders();
 };
@@ -826,10 +918,13 @@ function celebrate() {
 const onItemChange = async e => {
   const sel = e.target.closest("select[data-item]"); if (!sel) return;
   if (!canUpd()) { toast("You can't change status"); return; }
-  const it = items.find(x => x.id == sel.dataset.item), status = sel.value;
-  const { error } = await db.from("order_items").update({ item_status: status }).eq("id", it.id);
-  if (error) { toast("Not saved: " + error.message); sel.value = it.item_status; return; }
-  it.item_status = status;
+  const it0 = items.find(x => x.id == sel.dataset.item), status = sel.value;
+  const { error } = await db.from("order_items").update({ item_status: status }).eq("id", it0.id);
+  if (error) { toast("Not saved: " + error.message); sel.value = it0.item_status; return; }
+  const it = items.find(x => x.id == it0.id) || it0; it.item_status = status;
+  // read this order's items back from the database, so the order status is worked out from what is really saved
+  const fresh = await db.from("order_items").select("id,item_status").eq("order_id", it.order_id);
+  if (!fresh.error && fresh.data) fresh.data.forEach(f => { const x = items.find(y => y.id === f.id); if (x) x.item_status = f.item_status; });
   const st = items.filter(x => x.order_id === it.order_id).map(x => x.item_status || "Pending");
   const os = st.every(s => s === "Dispatched") ? "Dispatched" : st.every(s => s === "Done" || s === "Dispatched") ? "Completed" : st.some(s => s !== "Pending") ? "In Production" : "Pending";
   const o = orders.find(x => x.id === it.order_id);
@@ -1267,15 +1362,7 @@ window.addEventListener("paste", e => {
   handleFile(f);
 });
 
-// Keep the numbers fresh: reload when the tab is opened again and every minute,
-// but never while someone is typing in an order form or an update panel.
-function autoRefresh() {
-  if (!me || document.visibilityState !== "visible" || inl || editing) return;
-  if (!$("new").classList.contains("hide")) return;
-  load();
-}
-document.addEventListener("visibilitychange", autoRefresh);
-setInterval(autoRefresh, 60000);
+// Data loads when you sign in and when you press the refresh button (or after you save something). Nothing reloads by itself.
 
 
 // ---- Management: email the pending list now (the daily email uses the same function) ----
@@ -1322,6 +1409,70 @@ $("note").addEventListener("input", () => { $("notecnt").textContent = $("note")
   renderDash = wrap(renderDash); renderOrders = wrap(renderOrders);
 })();
 
+
+// ---- animations only play when a screen is opened, not on every silent refresh or filter ----
+let enterT;
+function enterAnim() {
+  const els = ["kpis", "secs", "olist", "chartcard"].map(x => $(x)).filter(Boolean);
+  els.forEach(e => e.classList.add("enter")); clearTimeout(enterT);
+  enterT = setTimeout(() => els.forEach(e => e.classList.remove("enter")), 1700);
+}
+const _show = show;
+show = function (t) {
+  const go = () => { _show(t); enterAnim(); };
+  if (document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches) { try { document.startViewTransition(go); return; } catch (e) {} }
+  go();
+};
+
+// ---- orders by status for one day (donut) ----
+const CH = [["Pending", "#8f93b8"], ["In Production", "#f5a524"], ["Completed", "#12a150"], ["Dispatched", "#4a4fd0"]];
+let chartDay = null, chartBuilt = false, chartTotal = 0;
+const shiftDay = (str, n) => { const d = new Date(str + "T12:00:00"); d.setDate(d.getDate() + n); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+function chartHover(st, cnt) {
+  document.querySelectorAll("#dsvg .seg, #chleg .lg").forEach(e => e.classList.toggle("hl", !!st && e.dataset.s === st));
+  $("chartcard").classList.toggle("hovering", !!st);
+  if (st) { $("dtot").textContent = cnt[st]; $("dlbl").textContent = st; } else { $("dtot").textContent = chartTotal; $("dlbl").textContent = "orders"; }
+}
+function chartGo(st) {
+  fstat = st; onlyToday = false; onlyDay = chartDay; $("q").value = "";
+  document.querySelectorAll("#chips button").forEach(x => x.classList.toggle("on", x.dataset.s === fstat));
+  show("orders"); renderOrders();
+}
+let chartCnt = {};
+function renderChart() {
+  const card = $("chartcard"); if (!card) return;
+  const R = 52, C = 2 * Math.PI * R;
+  if (!chartDay) chartDay = today();
+  if (!chartBuilt) {
+    $("dsvg").innerHTML = `<circle class="ring-bg" cx="75" cy="75" r="${R}"/>` + CH.map(c => `<circle class="seg" data-s="${c[0]}" cx="75" cy="75" r="${R}" stroke="${c[1]}" style="stroke-dasharray:0 ${C};stroke-dashoffset:0;stroke-linecap:butt" transform="rotate(-90 75 75)"/>`).join("");
+    $("dsvg").addEventListener("mouseover", e => { const g = e.target.closest(".seg"); if (g) chartHover(g.dataset.s, chartCnt); });
+    $("dsvg").addEventListener("mouseleave", () => chartHover(null, chartCnt));
+    $("dsvg").addEventListener("click", e => { const g = e.target.closest(".seg"); if (g) chartGo(g.dataset.s); });
+    $("chleg").addEventListener("mouseover", e => { const g = e.target.closest(".lg"); chartHover(g ? g.dataset.s : null, chartCnt); });
+    $("chleg").addEventListener("mouseleave", () => chartHover(null, chartCnt));
+    $("chleg").addEventListener("click", e => { const g = e.target.closest(".lg"); if (g) chartGo(g.dataset.s); });
+    $("chtabs").addEventListener("click", e => { const b = e.target.closest("button[data-d]"); if (!b) return; chartDay = shiftDay(today(), -b.dataset.d); $("chdate").value = ""; renderChart(); });
+    $("chdate").addEventListener("change", e => { if (e.target.value) { chartDay = e.target.value; renderChart(); } });
+    $("chdate").addEventListener("click", e => { try { e.target.showPicker(); } catch (_) {} });
+    chartBuilt = true; card.dataset.fresh = "1";
+  }
+  const list = orders.filter(o => placedOn(o, chartDay));
+  chartCnt = {}; CH.forEach(c => chartCnt[c[0]] = list.filter(o => o.status === c[0]).length);
+  const tot = list.length, nz = CH.filter(c => chartCnt[c[0]] > 0).length, gap = nz > 1 ? 5 : 0, td = today();
+  chartTotal = tot;
+  $("chtitle").textContent = chartDay === td ? "Orders placed today" : chartDay === shiftDay(td, -1) ? "Orders placed yesterday" : "Orders placed on " + fmt(chartDay);
+  document.querySelectorAll("#chtabs button").forEach(b => b.classList.toggle("on", chartDay === shiftDay(td, -b.dataset.d)));
+  $("chdl").classList.toggle("on", chartDay !== td && chartDay !== shiftDay(td, -1));
+  $("chleg").innerHTML = CH.map(c => `<button type="button" class="lg" data-s="${c[0]}"><i style="background:${c[1]}"></i><span>${c[0]}</span><b>${chartCnt[c[0]]}</b><em>${tot ? Math.round(chartCnt[c[0]] / tot * 100) : 0}%</em></button>`).join("") + (tot ? "" : '<p class="ch-empty">No orders were placed on this day.</p>');
+  const apply = () => { let off = 0;
+    document.querySelectorAll("#dsvg .seg").forEach((el, k) => { const L = tot ? C * chartCnt[CH[k][0]] / tot : 0, len = Math.max(L - gap, 0); el.style.strokeLinecap = len > 0.5 ? "round" : "butt"; el.style.strokeDasharray = len + " " + (C - len); el.style.strokeDashoffset = -off; off += L; }); };
+  if (card.dataset.fresh) { delete card.dataset.fresh; requestAnimationFrame(() => requestAnimationFrame(apply)); } else apply();
+  const el = $("dtot"), from = +el.textContent || 0, t0 = performance.now();
+  (function step(t) { const p = Math.min(1, (t - t0) / 700); el.textContent = Math.round(from + (tot - from) * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(step); })(t0);
+  $("dlbl").textContent = "orders";
+}
+const _rd2 = renderDash; renderDash = function () { const r = _rd2.apply(this, arguments); renderChart(); return r; };
+
 // ---- tabs ----
 function show(t) {
   if (t === "new" && !canNew()) return;
@@ -1330,6 +1481,18 @@ function show(t) {
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
 }
 $("tabs").onclick = e => { const b = e.target.closest("button[data-t]"); if (b) show(b.dataset.t); };
+
+// ---- keep the page still and relaxed: nothing reloads by itself, loops pause when hidden/idle ----
+(function () {
+  const h = document.documentElement; let idle;
+  const wake = () => { h.classList.remove("rest"); clearTimeout(idle); idle = setTimeout(() => h.classList.add("rest"), 30000); };
+  ["pointermove", "pointerdown", "keydown", "scroll", "touchstart"].forEach(ev => addEventListener(ev, wake, { passive: true }));
+  document.addEventListener("visibilitychange", () => document.hidden ? h.classList.add("rest") : wake());
+  wake();
+  // never let the Supabase library or the browser's back/forward cache re-run the app on its own
+  addEventListener("pageshow", e => { if (e.persisted) h.classList.remove("rest"); });
+  try { db && db.auth.onAuthStateChange(() => {}); } catch (_) {}
+})();
 
 boot();
 </script>
