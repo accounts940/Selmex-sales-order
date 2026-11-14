@@ -500,6 +500,26 @@ html.rest *,html.rest *:before,html.rest *:after{animation-play-state:paused!imp
 #ppop .row{font-size:13px;margin-top:6px}#ppop .row b{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
 #ppop .row.d b{color:var(--ok)}#ppop .row.w b{color:#2e3192}#ppop .row.l b{color:var(--warn)}
 #ppop .x{position:absolute;right:8px;top:8px;padding:4px 8px;background:#eef0fb;color:var(--blue);border-radius:8px;font-size:13px}
+
+/* ===================== smooth + fast pass 2 ===================== */
+:root{--ease:cubic-bezier(.22,.8,.2,1);--spring:cubic-bezier(.34,1.45,.5,1)}
+button,.chips button,nav button,.srch,select,input{transition:transform .22s var(--ease),box-shadow .25s var(--ease),background-color .25s var(--ease),color .2s var(--ease),border-color .25s var(--ease),opacity .2s}
+button:active:not(:disabled),.chips button:active,nav button:active{transform:scale(.965);transition-duration:.08s}
+.chips button.on{transition:transform .35s var(--spring),background-color .25s var(--ease),color .2s}
+.chips button:hover:not(.on),nav button:hover:not(.on){transform:translateY(-1px)}
+.b,.ist,.pg .pgb i,.pgbox{transition:background-color .35s var(--ease),color .3s var(--ease),width .6s var(--ease)}
+.og tbody td{transition:background-color .25s var(--ease)}
+@keyframes rowflash{0%{background:#e3e7ff}100%{background:transparent}}
+.og tbody.flash td{animation:rowflash 1.3s var(--ease) both}
+.og tbody.flash td.act{animation:none}
+.inlbox{animation:inbox .38s var(--ease) both;transform-origin:top}
+@keyframes inbox{from{opacity:0;transform:translateY(-8px) scale(.992)}to{opacity:1;transform:none}}
+.ghead{animation:none}.enter .ghead{animation:in .35s var(--ease) both}
+.di{transition:background-color .25s var(--ease),transform .25s var(--ease)}
+.di:hover{transform:translateX(2px)}
+#ppop,.toast,#toast{transition:opacity .3s var(--ease),transform .4s var(--spring)}
+.scroll{scroll-behavior:smooth;scrollbar-gutter:stable}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
@@ -669,8 +689,13 @@ const placedOn = (o, t) => o.order_date === t || (!!o.created_at && new Date(new
 const placedToday = o => placedOn(o, today());
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 const fmt = d => d ? new Date(d + "T00:00:00").toLocaleDateString("en-GB", {day:"2-digit", month:"short", year:"numeric"}) : "-";
+let IX = null, IXsrc = null, IXn = -1;
+function itemsOf(oid) {
+  if (IXsrc !== items || IXn !== items.length) { IX = new Map(); items.forEach(i => { let a = IX.get(i.order_id); if (!a) IX.set(i.order_id, a = []); a.push(i); }); IXsrc = items; IXn = items.length; }
+  return IX.get(oid) || [];
+}
 function prog(oid) {
-  const its = items.filter(i => i.order_id === oid), g = st => its.filter(i => (i.item_status || "Pending") === st);
+  const its = itemsOf(oid), g = st => its.filter(i => (i.item_status || "Pending") === st);
   const disp = g("Dispatched"), done = g("Done"), left = its.filter(i => !["Done", "Dispatched"].includes(i.item_status || "Pending"));
   const fin = disp.length + done.length;
   return { its, disp, done, left, n: its.length, fin, partial: its.length > 1 && fin > 0 && fin < its.length };
@@ -829,22 +854,36 @@ const IC = {
 const ico = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>`;
 let fstat = "", openSet = new Set(), onlyToday = false, onlyDay = null;
 
+const TABMAP = { "Pending": "Pending", "In Production": "In Production", "Completed": "Done", "Dispatched": "Dispatched" };
+const istOf = i => i.item_status || "Pending";
+function hasTab(o, tab) {
+  const its = itemsOf(o.id);
+  return its.length ? its.some(i => istOf(i) === TABMAP[tab]) : o.status === tab;
+}
+function otherNote(oid, tab) {
+  const rest = itemsOf(oid).filter(i => istOf(i) !== TABMAP[tab]); if (!rest.length) return "";
+  const c = {}; rest.forEach(i => { const k = istOf(i) === "Done" ? "done" : istOf(i).toLowerCase(); c[k] = (c[k] || 0) + 1; });
+  const p = prog(oid);
+  return `<span class="pg"><span class="b partial">Partial</span><span class="pgb"><i style="width:${Math.round(p.fin / p.n * 100)}%"></i></span><small>Also in this order: ${Object.entries(c).map(([k, v]) => v + " " + k).join(", ")}</small></span>`;
+}
 function pgHtml(oid) {
   const p = prog(oid); if (!p.partial) return "";
   return `<span class="pg"><span class="b partial">Partial</span><span class="pgb"><i style="width:${Math.round(p.fin / p.n * 100)}%"></i></span><small>${progText(p)}</small></span>`;
 }
-function ordTable(list, full) {
+function ordTable(list, full, tab, pinId) {
   if (!list.length) return '<p class="empty">None</p>';
   const head = ["Order", "Company", "Item", "Size", "Qty"].concat(canRate() ? ["Rate"] : [], ["Delivery", "Status"], full ? ["Actions"] : []);
   const cells = (it, multi) => `<td>${esc(it.item_description || "-")}${multi && it.id ? `<span class="b ist ${String(it.item_status || "Pending").replace(/\s/g, "").toLowerCase()}">${esc(it.item_status || "Pending")}</span>` : ""}${it.micron ? `<small class="mi">${esc(it.micron)}</small>` : ""}</td><td>${esc(it.size)}</td><td class="q">${it.quantity != null ? esc(it.quantity) + " " + esc(it.unit || "") : ""}</td>` +
     (canRate() ? `<td class="q">${it.rate != null && it.rate !== "" ? money(it.rate) + (it.quantity ? `<small class="mi">Total ${money(it.rate * it.quantity)}</small>` : "") : "—"}</td>` : "");
   let n = 0;
   const body = list.map(o => {
-    const its = items.filter(i => i.order_id === o.id), rs = Math.max(its.length, 1), r = ` rowspan="${rs}"`;
+    let its = itemsOf(o.id); const total = its.length;
+    let tabView = !!tab; if (tab) { const m = its.filter(i => istOf(i) === TABMAP[tab]); if (m.length) its = m; else tabView = false; }
+    const rs = Math.max(its.length, 1), r = ` rowspan="${rs}"`;
     const first = `<td${r} class="oc"><b>${esc(o.po_id)}</b><small>${fmt(o.order_date)}</small></td><td${r} class="cm">${esc(o.company_name)}<small class="mi">${esc(title(o.assigned_employee))}</small>${noteHtml(o)}</td>`;
-    const last = `<td${r} class="nw">${fmt(o.delivery_date)}${isOverdue(o) ? '<br><span class="b late">Overdue</span>' : ""}</td><td${r}>${badge(o.status)}${pgHtml(o.id)}</td>` +
+    const last = `<td${r} class="nw">${fmt(o.delivery_date)}${isOverdue(o) ? '<br><span class="b late">Overdue</span>' : ""}</td><td${r}>${tabView ? badge(tab) + otherNote(o.id, tab) : badge(o.status) + pgHtml(o.id)}</td>` +
       (full ? `<td${r} class="act"><button class="pri sm" data-upd="${o.id}" type="button">${canUpd() ? "Update" : "Track"}</button>${canEdit(o) ? `<button class="alt sm" data-edit="${o.id}" type="button">Edit</button>` : ""}</td>` : "");
-    const rows = (its.length ? its : [{}]).map((it, k) => `<tr>${k ? "" : first}${cells(it, its.length > 1)}${k ? "" : last}</tr>`).join("");
+    const rows = (its.length ? its : [{}]).map((it, k) => `<tr>${k ? "" : first}${cells(it, !tabView && its.length > 1)}${k ? "" : last}</tr>`).join("");
     return `<tbody data-oid="${o.id}" style="--i:${Math.min(n++, 14)}">${rows}</tbody>`;
   }).join("");
   return `<div class="scroll tw"><table class="og" data-cols="${head.length}"><thead><tr>${head.map(h => `<th${h === "Actions" ? ' class="act"' : ""}>${h}</th>`).join("")}</tr></thead>${body}</table></div>`;
@@ -892,21 +931,29 @@ function renderDash() {
   $("secs").innerHTML = tp + P.map(p => `<div class="panel sec ${p[3]}"><h2>${p[0]} (${p[2].length})</h2><p class="hint">${p[1]}</p>${secTable(p[2])}</div>`).join("");
 }
 
+let lastOSig = null, flashId = null;
 function renderOrders() {
   stash();
   const q = $("q").value.toLowerCase(), cur = $("fsp").value, dt = $("fdt").value;
   const names = [...new Set(orders.map(o => o.assigned_employee).filter(Boolean))].sort();
   $("fsp").innerHTML = '<option value="">All</option>' + names.map(n => `<option value="${esc(n)}"${n === cur ? " selected" : ""}>${esc(title(n))}</option>`).join("");
-  const list = orders.filter(o => (!fstat || o.status === fstat) && (!onlyToday || placedToday(o)) && (!onlyDay || placedOn(o, onlyDay)) && matches(o, q) && (!$("fsp").value || o.assigned_employee === $("fsp").value) && (!dt || o.delivery_date === dt));
+  const list = orders.filter(o => (!fstat || hasTab(o, fstat)) && (!onlyToday || placedToday(o)) && (!onlyDay || placedOn(o, onlyDay)) && matches(o, q) && (!$("fsp").value || o.assigned_employee === $("fsp").value) && (!dt || o.delivery_date === dt));
   $("ocount").textContent = list.length + " order" + (list.length === 1 ? "" : "s") + (onlyToday ? " placed today" : onlyDay ? " placed on " + fmt(onlyDay) : "");
   const G = [
     ["Open orders", "Pending and in production", o => isOpen(o)],
     ["Completed", "Production finished, waiting to be dispatched", o => o.status === "Completed"],
     ["Dispatched", "Left the factory", o => o.status === "Dispatched"]];
-  $("olist").innerHTML = list.length ? G.map(g => {
+  const TH = { "Pending": ["Pending", "Items not started yet"], "In Production": ["In production", "Items being made right now"], "Completed": ["Completed items", "Production finished, waiting to be dispatched"], "Dispatched": ["Dispatched items", "Left the factory"] };
+  const pin = inl && orders.find(x => x.id === inl.id);
+  if (fstat && pin && !list.includes(pin)) list.push(pin);       // keep the order you are updating on screen, even if its item just moved to another tab
+  $("olist").innerHTML = list.length ? (fstat ? `<div class="ghead"><h2>${TH[fstat][0]} (${list.length})</h2><span>${TH[fstat][1]}</span></div>` + ordTable(list, true, fstat) : G.map(g => {
     const l = list.filter(g[2]);
     return l.length ? `<div class="ghead"><h2>${g[0]} (${l.length})</h2><span>${g[1]}</span></div>` + ordTable(l, true) : "";
-  }).join("") : '<p class="empty">No orders match. Change the search or the filters.</p>';
+  }).join("")) : '<p class="empty">No orders match. Change the search or the filters.</p>';
+  const sig = [fstat, $("fsp").value, $("fdt").value, onlyToday, onlyDay].join("|"), ol = $("olist");
+  if (lastOSig !== null && sig !== lastOSig) { ol.classList.add("enter"); clearTimeout(renderOrders.t); renderOrders.t = setTimeout(() => ol.classList.remove("enter"), 900); }
+  lastOSig = sig;
+  if (flashId) { const fr = ol.querySelector(`tbody[data-oid="${flashId}"]`); if (fr) { fr.classList.add("flash"); setTimeout(() => fr.classList.remove("flash"), 1400); } flashId = null; }
   placeInline();
 }
 $("fsp").onchange = renderOrders; $("fdt").onchange = renderOrders;
@@ -915,8 +962,9 @@ $("fclear").onclick = () => {
   document.querySelectorAll("#chips button").forEach(x => x.classList.toggle("on", x.dataset.s === ""));
   renderOrders();
 };
-$("q").oninput = renderOrders;
-$("dq").oninput = renderDash;
+const lazy = (fn, ms = 130) => { let t; return () => { clearTimeout(t); t = setTimeout(() => requestAnimationFrame(fn), ms); }; };
+$("q").oninput = lazy(renderOrders);
+$("dq").oninput = lazy(renderDash);
 $("kpis").onclick = e => {
   const k = e.target.closest("[data-go]"); if (!k) return;
   onlyToday = k.dataset.go === "Today"; onlyDay = null; fstat = onlyToday ? "" : k.dataset.go;
@@ -982,7 +1030,7 @@ const itemChange = async (e, sel) => {
     else if (os === "Completed" || os === "Dispatched") celebrateNext = true;
   }
   await db.from("activity_log").insert({ order_id: o.id, action: `${it.item_description} marked ${status}`, done_by: me.name });
-  toast("Saved"); renderDash(); renderOrders(); if (updId) drawItems(); partialPop(o.id);
+  toast("Saved"); flashId = o.id; renderDash(); renderOrders(); if (updId) drawItems(); partialPop(o.id);
   if (celebrateNext) { celebrateNext = false; celebrate(); }
 };
 
@@ -1016,7 +1064,7 @@ function drawItems() {
   $("dstep").innerHTML = `<div class="stp-line"><i></i></div>` + S.map((nm, k) => `<div class="stp ${k < si || all ? "done" : k === si ? "cur" : ""}"><span>${k < si || all ? "\u2713" : k + 1}</span><small>${nm}</small></div>`).join("");
   const sf = $("dstep").querySelector(".stp-line i");
   requestAnimationFrame(() => requestAnimationFrame(() => { sf.style.width = (si / 3 * 100) + "%"; }));
-  const its = items.filter(i => i.order_id === updId);
+  const its = itemsOf(updId);
   const pp = prog(updId), pbox = pp.partial ? `<div class="pgbox"><div class="d"><b>Done / dispatched (${pp.fin})</b>${[...pp.disp, ...pp.done].map(nm).join(", ")}</div><div class="l"><b>Still left (${pp.left.length})</b>${pp.left.map(nm).join(", ")}</div></div>` : "";
   $("ditems").innerHTML = pbox + its.map(i => `<div class="di"><div><b>${esc(i.item_description)}</b><small>${[i.micron, i.size].filter(Boolean).map(esc).join(" · ")}${i.micron || i.size ? " · " : ""}${esc(i.quantity)} ${esc(i.unit || "")}${canRate() && i.rate != null ? " · " + money(i.rate) + " each" : ""}</small></div>` +
     (canUpd() ? `<select data-item="${i.id}" aria-label="Item status">${ISTAT.map(x => `<option${x === i.item_status ? " selected" : ""}>${x}</option>`).join("")}</select>` : badge(i.item_status || "Pending")) + `</div>`).join("") || '<p class="empty">No items</p>';
