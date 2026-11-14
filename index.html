@@ -421,7 +421,7 @@ html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 .enter .og tbody{animation:rowin .42s var(--ease) both;animation-delay:calc(var(--i,0)*40ms)}
 .enter .ghead{animation:in .3s ease both}
 .enter.chartcard{animation:rise .6s var(--ease) both}
-#totop,#sprog,#topbar{will-change:transform}
+body:before,body:after,#totop,#sprog,#topbar{will-change:transform}
 ::view-transition-old(root),::view-transition-new(root){animation-duration:.26s;animation-timing-function:var(--ease)}
 .panel,.kpi,button,.srch,.lg{transition-timing-function:var(--ease)}
 
@@ -461,28 +461,6 @@ html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 @media(max-width:760px){#livet{display:none}}
 .ib.busy svg{animation:spinr .8s linear infinite}
 .live i{animation:none;background:#9aa0b8;color:#9aa0b8}
-
-/* ===================== calm + smooth pass ===================== */
-/* 1. Background colour blobs: still (no endless drifting / heavy blur repaint) */
-body:before,body:after{animation:none!important;filter:none;will-change:auto;
-  background:radial-gradient(closest-side,#4a4fd01f,transparent)}
-body:after{background:radial-gradient(closest-side,#e31e2414,transparent)}
-/* 2. Same icon animations, but they play a couple of times and then rest */
-.kpi.k1 i svg,.kpi.k2 i svg,.kpi.k3 i svg,.kpi.k5 i svg,.kpi.k6 i svg{animation-iteration-count:2!important;animation-duration:3.2s!important}
-#hello b{animation:none!important;background-position:30% 50%}
-.stp.cur span{animation-iteration-count:3}
-.b.inproduction:before,.b.late:before{animation:none}
-.spl-card .lcard{animation-duration:3s}
-/* 3. Smoothness: GPU-friendly motion, cheaper blur, no layout jank */
-header.top{background:#fffffff2;-webkit-backdrop-filter:none;backdrop-filter:none}
-.kpi,.panel,.card,.og tbody,.lg,nav button,.chips button{backface-visibility:hidden;-webkit-font-smoothing:antialiased}
-.og tbody,.card,.panel{contain:layout paint}
-.card[open] .scroll,.scroll{-webkit-overflow-scrolling:touch}
-body{overflow-x:hidden}
-img,svg{image-rendering:auto}
-/* tab hidden or user idle: freeze every looping animation */
-html.rest *,html.rest *:before,html.rest *:after{animation-play-state:paused!important}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
@@ -776,7 +754,7 @@ async function loadData(opts) {
     if (x.status === "Pending" || x.status === "In Production" || x.status === "Completed") {      // an order follows its items
       const st = i.data.filter(y => y.order_id === x.id).map(y => y.item_status || "Pending");
       if (st.length) { const ds = derive(st);
-        if (ds !== x.status) { const back = x.status === "Completed" && ds !== "Completed" && ds !== "Dispatched"; x = { ...x, status: ds }; if (back) x.completed_at = null; if (canUpd()) db.from("orders").update(back ? { status: ds, completed_at: null } : { status: ds }).eq("id", x.id).then(r => { if (r.error && back) db.from("orders").update({ status: ds }).eq("id", x.id).then(() => {}); }); } }
+        if (ds !== x.status) { const back = x.status === "Completed" && ds !== "Completed" && ds !== "Dispatched"; x = { ...x, status: ds }; if (back) x.completed_at = null; if (canUpd()) db.from("orders").update(back ? { status: ds, completed_at: null } : { status: ds }).eq("id", x.id).then(() => {}); } }
     }
     return x;
   });
@@ -933,10 +911,7 @@ const onItemChange = async e => {
     const upd = { status: os, completed_at: fin ? (o.completed_at || now) : null, dispatched_at: os === "Dispatched" ? now : null };
     let r = await db.from("orders").update(upd).eq("id", o.id);
     if (r.error) r = await db.from("orders").update({ status: os }).eq("id", o.id);
-    // the order always follows its items on screen, even if the database refuses the write
-    o.status = os; o.completed_at = upd.completed_at; o.dispatched_at = upd.dispatched_at;
-    if (r.error) toast("Item saved, but order status could not be saved: " + r.error.message);
-    else if (os === "Completed" || os === "Dispatched") celebrateNext = true;
+    if (!r.error) { o.status = os; o.completed_at = upd.completed_at; o.dispatched_at = upd.dispatched_at; if (os === "Completed" || os === "Dispatched") celebrateNext = true; }
   }
   await db.from("activity_log").insert({ order_id: o.id, action: `${it.item_description} marked ${status}`, done_by: me.name });
   toast("Saved"); renderDash(); renderOrders(); if (updId) drawItems();
@@ -1484,18 +1459,6 @@ function show(t) {
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
 }
 $("tabs").onclick = e => { const b = e.target.closest("button[data-t]"); if (b) show(b.dataset.t); };
-
-// ---- keep the page still and relaxed: nothing reloads by itself, loops pause when hidden/idle ----
-(function () {
-  const h = document.documentElement; let idle;
-  const wake = () => { h.classList.remove("rest"); clearTimeout(idle); idle = setTimeout(() => h.classList.add("rest"), 30000); };
-  ["pointermove", "pointerdown", "keydown", "scroll", "touchstart"].forEach(ev => addEventListener(ev, wake, { passive: true }));
-  document.addEventListener("visibilitychange", () => document.hidden ? h.classList.add("rest") : wake());
-  wake();
-  // never let the Supabase library or the browser's back/forward cache re-run the app on its own
-  addEventListener("pageshow", e => { if (e.persisted) h.classList.remove("rest"); });
-  try { db && db.auth.onAuthStateChange(() => {}); } catch (_) {}
-})();
 
 boot();
 </script>
