@@ -503,8 +503,9 @@ html.rest *,html.rest *:before,html.rest *:after{animation-play-state:paused!imp
 
 /* ===================== smooth + fast pass 2 ===================== */
 :root{--ease:cubic-bezier(.22,.8,.2,1);--spring:cubic-bezier(.34,1.45,.5,1)}
-button,.chips button,nav button,.srch,select,input{transition:transform .22s var(--ease),box-shadow .25s var(--ease),background-color .25s var(--ease),color .2s var(--ease),border-color .25s var(--ease),opacity .2s}
-button:active:not(:disabled),.chips button:active,nav button:active{transform:scale(.965);transition-duration:.08s}
+button,.chips button,nav button,.srch,select,input{transition:transform .22s var(--ease),scale .15s var(--ease),box-shadow .25s var(--ease),background-color .25s var(--ease),color .2s var(--ease),border-color .25s var(--ease),opacity .2s}
+button:active:not(:disabled),.chips button:active,nav button:active{scale:.965;transition-duration:.08s}
+.eye:active{scale:.88}
 .chips button.on{transition:transform .35s var(--spring),background-color .25s var(--ease),color .2s}
 .chips button:hover:not(.on),nav button:hover:not(.on){transform:translateY(-1px)}
 .b,.ist,.pg .pgb i,.pgbox{transition:background-color .35s var(--ease),color .3s var(--ease),width .6s var(--ease)}
@@ -765,7 +766,8 @@ $("go").onclick = async () => {
   $("login").classList.add("leaving");
   setTimeout(async () => { await splashRun(() => start(data.user.email)); $("login").classList.remove("leaving"); }, 300);
 };
-$("pwt").onclick = () => { const on = $("pw").type === "password"; $("pw").type = on ? "text" : "password"; $("pwt").setAttribute("aria-label", on ? "Hide password" : "Show password"); $("pwt").classList.toggle("on", on); };
+$("pwt").onmousedown = e => e.preventDefault();
+$("pwt").onclick = () => { const on = $("pw").type === "password"; const pwEl = $("pw"), a = pwEl.selectionStart, z = pwEl.selectionEnd; pwEl.type = on ? "text" : "password"; try { if (a != null) pwEl.setSelectionRange(a, z); } catch (_) {} $("pwt").setAttribute("aria-label", on ? "Hide password" : "Show password"); $("pwt").classList.toggle("on", on); };
 $("pw").addEventListener("keyup", e => { $("caps").classList.toggle("hide", !(e.getModifierState && e.getModifierState("CapsLock"))); });
 $("pw").onkeydown = e => { if (e.key === "Enter") $("go").click(); };
 $("out").onclick = async () => {
