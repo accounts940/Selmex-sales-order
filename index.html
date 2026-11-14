@@ -955,6 +955,11 @@ function celebrate() {
 }
 const onItemChange = async e => {
   const sel = e.target.closest("select[data-item]"); if (!sel) return;
+  if (e.__itemDone) return; e.__itemDone = true;            // #updbox sits inside #olist, so the same event reaches both handlers
+  if (sel.dataset.busy) return; sel.dataset.busy = "1";
+  try { await itemChange(e, sel); } finally { delete sel.dataset.busy; }
+};
+const itemChange = async (e, sel) => {
   if (!canUpd()) { toast("You can't change status"); return; }
   const it0 = items.find(x => x.id == sel.dataset.item), status = sel.value;
   const { error } = await db.from("order_items").update({ item_status: status }).eq("id", it0.id);
@@ -1023,6 +1028,7 @@ async function loadLog(id) {
   const r = await db.from("activity_log").select("*").eq("order_id", id).order("created_at", { ascending: false }).limit(50);
   if (updId !== id) return;
   if (r.error) { $("dlog").innerHTML = '<p class="empty">History is not available: ' + esc(r.error.message) + '</p>'; return; }
+  const seenL = []; r.data = r.data.filter(l => { const t = new Date(l.created_at).getTime(); if (seenL.some(q => q.a === l.action && q.b === l.done_by && Math.abs(q.t - t) < 3000)) return false; seenL.push({ a: l.action, b: l.done_by, t }); return true; });
   $("dlog").innerHTML = r.data.length ? r.data.map(l => `<div><b>${esc(l.action)}</b><small>${esc(title(l.done_by))} · ${l.created_at ? new Date(l.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}</small></div>`).join("") : '<p class="empty">No updates yet</p>';
 }
 function openUpdate(id) {
