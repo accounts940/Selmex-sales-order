@@ -505,7 +505,10 @@ html.rest *,html.rest *:before,html.rest *:after{animation-play-state:paused!imp
 :root{--ease:cubic-bezier(.22,.8,.2,1);--spring:cubic-bezier(.34,1.45,.5,1)}
 button,.chips button,nav button,.srch,select,input{transition:transform .22s var(--ease),scale .15s var(--ease),box-shadow .25s var(--ease),background-color .25s var(--ease),color .2s var(--ease),border-color .25s var(--ease),opacity .2s}
 button:active:not(:disabled),.chips button:active,nav button:active{scale:.965;transition-duration:.08s}
-.eye:active{scale:.88}
+.eye,.eye:active:not(:disabled){scale:1!important;overflow:visible;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.eye:after{content:"";position:absolute;inset:-8px -6px}
+.eye .rip{display:none}
+.eye svg{pointer-events:none}
 .chips button.on{transition:transform .35s var(--spring),background-color .25s var(--ease),color .2s}
 .chips button:hover:not(.on),nav button:hover:not(.on){transform:translateY(-1px)}
 .b,.ist,.pg .pgb i,.pgbox{transition:background-color .35s var(--ease),color .3s var(--ease),width .6s var(--ease)}
@@ -521,6 +524,8 @@ button:active:not(:disabled),.chips button:active,nav button:active{scale:.965;t
 #ppop,.toast,#toast{transition:opacity .3s var(--ease),transform .4s var(--spring)}
 .scroll{scroll-behavior:smooth;scrollbar-gutter:stable}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.ghead .dtoggle{margin-left:auto;padding:6px 14px;font-size:13px;border-radius:99px}
+.ghead{flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -736,6 +741,7 @@ const recent = d => Date.now() - new Date(d) < 2 * 864e5;   // within the last 2
 // A dispatched order leaves the dashboard this many days after it was marked Dispatched (it stays in the Orders tab).
 const DISPATCH_KEEP_DAYS = 4;
 const within = (d, days) => Date.now() - new Date(d) < days * 864e5;
+const dispAt = o => o.dispatched_at || o.completed_at || o.created_at;
 const matches = (o, q) => !q || [o.po_id, o.company_name, o.assigned_employee, o.note].join(" ").toLowerCase().includes(q) ||
   items.some(i => i.order_id === o.id && (i.item_description || "").toLowerCase().includes(q));
 function toast(t) { const e = $("toast"); e.textContent = t; e.classList.add("show"); setTimeout(() => e.classList.remove("show"), 2800); }
@@ -749,11 +755,11 @@ async function boot() {
   if (!db) { $("login").classList.remove("hide"); $("go").disabled = true; $("lmsg").textContent = "Setup missing: open config.js and add your Supabase key."; return; }
   if (sessionStorage.getItem("selmex_signedout")) {            // just signed out: always show the sign-in screen
     sessionStorage.removeItem("selmex_signedout");
-    $("login").classList.remove("hide"); $("lmsg").className = "msg okmsg"; $("lmsg").textContent = "You have been signed out.";
+    $("login").classList.remove("hide"); pwReset(); $("lmsg").className = "msg okmsg"; $("lmsg").textContent = "You have been signed out.";
     return;
   }
   const { data } = await db.auth.getSession();
-  if (data.session) await splashRun(() => start(data.session.user.email)); else $("login").classList.remove("hide");
+  if (data.session) await splashRun(() => start(data.session.user.email)); else $("login").classList.remove("hide"); pwReset();
 }
 const shake = () => { const bx = document.querySelector("#login .box"); bx.classList.remove("shake"); void bx.offsetWidth; bx.classList.add("shake"); };
 $("go").onclick = async () => {
@@ -766,8 +772,18 @@ $("go").onclick = async () => {
   $("login").classList.add("leaving");
   setTimeout(async () => { await splashRun(() => start(data.user.email)); $("login").classList.remove("leaving"); }, 300);
 };
-$("pwt").onmousedown = e => e.preventDefault();
-$("pwt").onclick = () => { const on = $("pw").type === "password"; const pwEl = $("pw"), a = pwEl.selectionStart, z = pwEl.selectionEnd; pwEl.type = on ? "text" : "password"; try { if (a != null) pwEl.setSelectionRange(a, z); } catch (_) {} $("pwt").setAttribute("aria-label", on ? "Hide password" : "Show password"); $("pwt").classList.toggle("on", on); };
+const pwToggle = () => {
+  const pwEl = $("pw"), btn = $("pwt"), show = pwEl.type === "password", a = pwEl.selectionStart, z = pwEl.selectionEnd;
+  pwEl.type = show ? "text" : "password";
+  try { if (a != null) pwEl.setSelectionRange(a, z); } catch (_) {}
+  btn.setAttribute("aria-label", show ? "Hide password" : "Show password"); btn.setAttribute("aria-pressed", show ? "true" : "false"); btn.classList.toggle("on", show);
+};
+let pwDown = 0;
+$("pwt").addEventListener("pointerdown", e => { e.preventDefault(); pwDown = Date.now(); pwToggle(); });
+$("pwt").addEventListener("mousedown", e => e.preventDefault());
+$("pwt").addEventListener("click", e => { if (Date.now() - pwDown < 700 && e.detail > 0) return; pwToggle(); });   // keyboard (Enter / Space) toggles here; mouse and touch already toggled on press
+// every time the sign-in screen is shown again, start hidden so the eye and the field always agree
+const pwReset = () => { const pwEl = $("pw"), btn = $("pwt"); if (pwEl.type !== "password") { pwEl.type = "password"; btn.classList.remove("on"); btn.setAttribute("aria-label", "Show password"); btn.setAttribute("aria-pressed", "false"); } };
 $("pw").addEventListener("keyup", e => { $("caps").classList.toggle("hide", !(e.getModifierState && e.getModifierState("CapsLock"))); });
 $("pw").onkeydown = e => { if (e.key === "Enter") $("go").click(); };
 $("out").onclick = async () => {
@@ -783,7 +799,7 @@ async function start(email) {
   const { data, error } = await db.from("profiles").select("name,email,role,phone").eq("email", email.toLowerCase()).maybeSingle();
   if (error || !data) {
     await db.auth.signOut();
-    $("login").classList.remove("hide"); $("app").classList.add("hide");
+    $("login").classList.remove("hide"); pwReset(); $("app").classList.add("hide");
     $("lmsg").textContent = "No role is set for this email. Ask Management to add you.";
     return;
   }
@@ -854,7 +870,7 @@ const IC = {
   alert: '<path d="M12 9v4M12 17h.01M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/>'
 };
 const ico = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>`;
-let fstat = "", openSet = new Set(), onlyToday = false, onlyDay = null;
+let fstat = "", openSet = new Set(), onlyToday = false, onlyDay = null, onlyRecentDisp = false;
 
 const TABMAP = { "Pending": "Pending", "In Production": "In Production", "Completed": "Done", "Dispatched": "Dispatched" };
 const istOf = i => i.item_status || "Pending";
@@ -939,7 +955,7 @@ function renderOrders() {
   const q = $("q").value.toLowerCase(), cur = $("fsp").value, dt = $("fdt").value;
   const names = [...new Set(orders.map(o => o.assigned_employee).filter(Boolean))].sort();
   $("fsp").innerHTML = '<option value="">All</option>' + names.map(n => `<option value="${esc(n)}"${n === cur ? " selected" : ""}>${esc(title(n))}</option>`).join("");
-  const list = orders.filter(o => (!fstat || hasTab(o, fstat)) && (!onlyToday || placedToday(o)) && (!onlyDay || placedOn(o, onlyDay)) && matches(o, q) && (!$("fsp").value || o.assigned_employee === $("fsp").value) && (!dt || o.delivery_date === dt));
+  const list = orders.filter(o => (!fstat || hasTab(o, fstat)) && (!onlyRecentDisp || o.status !== "Dispatched" || within(dispAt(o), DISPATCH_KEEP_DAYS)) && (!onlyToday || placedToday(o)) && (!onlyDay || placedOn(o, onlyDay)) && matches(o, q) && (!$("fsp").value || o.assigned_employee === $("fsp").value) && (!dt || o.delivery_date === dt));
   $("ocount").textContent = list.length + " order" + (list.length === 1 ? "" : "s") + (onlyToday ? " placed today" : onlyDay ? " placed on " + fmt(onlyDay) : "");
   const G = [
     ["Open orders", "Pending and in production", o => isOpen(o)],
@@ -948,11 +964,11 @@ function renderOrders() {
   const TH = { "Pending": ["Pending", "Items not started yet"], "In Production": ["In production", "Items being made right now"], "Completed": ["Completed items", "Production finished, waiting to be dispatched"], "Dispatched": ["Dispatched items", "Left the factory"] };
   const pin = inl && orders.find(x => x.id === inl.id);
   if (fstat && pin && !list.includes(pin)) list.push(pin);       // keep the order you are updating on screen, even if its item just moved to another tab
-  $("olist").innerHTML = list.length ? (fstat ? `<div class="ghead"><h2>${TH[fstat][0]} (${list.length})</h2><span>${TH[fstat][1]}</span></div>` + ordTable(list, true, fstat) : G.map(g => {
+  $("olist").innerHTML = list.length ? (fstat ? `<div class="ghead"><h2>${TH[fstat][0]}${fstat === "Dispatched" && onlyRecentDisp ? " \u00b7 last " + DISPATCH_KEEP_DAYS + " days" : ""} (${list.length})</h2><span>${TH[fstat][1]}</span>${fstat === "Dispatched" ? `<button type="button" class="alt dtoggle" data-dtoggle>${onlyRecentDisp ? "Show all dispatched" : "Show last " + DISPATCH_KEEP_DAYS + " days only"}</button>` : ""}</div>` + ordTable(list, true, fstat) : G.map(g => {
     const l = list.filter(g[2]);
     return l.length ? `<div class="ghead"><h2>${g[0]} (${l.length})</h2><span>${g[1]}</span></div>` + ordTable(l, true) : "";
   }).join("")) : '<p class="empty">No orders match. Change the search or the filters.</p>';
-  const sig = [fstat, $("fsp").value, $("fdt").value, onlyToday, onlyDay].join("|"), ol = $("olist");
+  const sig = [fstat, $("fsp").value, $("fdt").value, onlyToday, onlyDay, onlyRecentDisp].join("|"), ol = $("olist");
   if (lastOSig !== null && sig !== lastOSig) { ol.classList.add("enter"); clearTimeout(renderOrders.t); renderOrders.t = setTimeout(() => ol.classList.remove("enter"), 900); }
   lastOSig = sig;
   if (flashId) { const fr = ol.querySelector(`tbody[data-oid="${flashId}"]`); if (fr) { fr.classList.add("flash"); setTimeout(() => fr.classList.remove("flash"), 1400); } flashId = null; }
@@ -960,22 +976,23 @@ function renderOrders() {
 }
 $("fsp").onchange = renderOrders; $("fdt").onchange = renderOrders;
 $("fclear").onclick = () => {
-  $("q").value = ""; $("fsp").value = ""; $("fdt").value = ""; fstat = ""; onlyToday = false; onlyDay = null;
+  $("q").value = ""; $("fsp").value = ""; $("fdt").value = ""; fstat = ""; onlyToday = false; onlyDay = null; onlyRecentDisp = false;
   document.querySelectorAll("#chips button").forEach(x => x.classList.toggle("on", x.dataset.s === ""));
   renderOrders();
 };
 const lazy = (fn, ms = 130) => { let t; return () => { clearTimeout(t); t = setTimeout(() => requestAnimationFrame(fn), ms); }; };
 $("q").oninput = lazy(renderOrders);
 $("dq").oninput = lazy(renderDash);
+$("olist").addEventListener("click", e => { if (e.target.closest("[data-dtoggle]")) { onlyRecentDisp = !onlyRecentDisp; renderOrders(); } });
 $("kpis").onclick = e => {
   const k = e.target.closest("[data-go]"); if (!k) return;
-  onlyToday = k.dataset.go === "Today"; onlyDay = null; fstat = onlyToday ? "" : k.dataset.go;
+  onlyToday = k.dataset.go === "Today"; onlyDay = null; fstat = onlyToday ? "" : k.dataset.go; onlyRecentDisp = fstat === "Dispatched";
   document.querySelectorAll("#chips button").forEach(x => x.classList.toggle("on", x.dataset.s === fstat));
   renderOrders(); show("orders");
 };
 $("chips").onclick = e => {
   const b = e.target.closest("button[data-s]"); if (!b) return;
-  fstat = b.dataset.s; onlyToday = false; onlyDay = null;
+  fstat = b.dataset.s; onlyToday = false; onlyDay = null; onlyRecentDisp = false;
   document.querySelectorAll("#chips button").forEach(x => x.classList.toggle("on", x === b));
   renderOrders();
 };
@@ -1532,7 +1549,7 @@ function chartHover(st, cnt) {
   if (st) { $("dtot").textContent = cnt[st]; $("dlbl").textContent = st; } else { $("dtot").textContent = chartTotal; $("dlbl").textContent = "orders"; }
 }
 function chartGo(st) {
-  fstat = st; onlyToday = false; onlyDay = chartDay; $("q").value = "";
+  fstat = st; onlyToday = false; onlyDay = chartDay; onlyRecentDisp = false; $("q").value = "";
   document.querySelectorAll("#chips button").forEach(x => x.classList.toggle("on", x.dataset.s === fstat));
   show("orders"); renderOrders();
 }
