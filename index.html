@@ -656,6 +656,24 @@ body{-webkit-tap-highlight-color:transparent}
   .dquick{display:none!important}
 }
 .dquick.hide{display:none!important}
+
+/* ===================== missing-rate reminder ===================== */
+#ratemodal{position:fixed;inset:0;z-index:520;display:grid;place-items:center;padding:16px;visibility:hidden;pointer-events:none}
+#ratemodal.open{visibility:visible;pointer-events:auto}
+.rm-back{position:absolute;inset:0;background:#10123a85;opacity:0;transition:opacity .28s var(--ease)}
+#ratemodal.open .rm-back{opacity:1}
+.rm-card{position:relative;width:min(440px,100%);background:#fff;border-radius:20px;box-shadow:0 26px 70px #10123a55;padding:22px 22px 18px;opacity:0;transform:translateY(18px) scale(.96);transition:opacity .28s var(--ease),transform .42s var(--spring)}
+#ratemodal.open .rm-card{opacity:1;transform:none}
+.rm-ic{width:46px;height:46px;border-radius:14px;background:#fff1d6;color:#a86400;display:grid;place-items:center;font-size:22px;font-weight:700;margin-bottom:12px}
+.rm-card h3{margin:0 0 6px;font-size:19px;color:var(--blue)}
+.rm-card p{margin:0 0 10px;color:var(--mut);font-size:14px;line-height:1.45}
+.rm-card ul{margin:0 0 14px;padding:10px 12px 10px 28px;background:#f8f9ff;border:1px solid var(--line);border-radius:12px;font-size:13.5px;max-height:34vh;overflow:auto}
+.rm-card li{margin:3px 0}.rm-card li small{color:var(--mut)}
+.rm-act{display:grid;gap:8px}.rm-act button{min-height:46px;border-radius:12px;font-size:15px}
+.rm-card>small{display:block;margin-top:10px;color:var(--mut);font-size:12px;text-align:center}
+.irow .r.need{border-color:#e31e24!important;box-shadow:0 0 0 3px #e31e2424!important;animation:needshake .45s var(--ease)}
+@keyframes needshake{20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+@media (max-width:820px){#ratemodal{place-items:end center;padding:0}.rm-card{width:100%;border-radius:22px 22px 0 0;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateY(40px)}}
 </style>
 </head>
 <body>
@@ -774,6 +792,7 @@ body{-webkit-tap-highlight-color:transparent}
     </section>
   </main>
 </div>
+<div id="ratemodal" aria-hidden="true"><div class="rm-back" id="rmback"></div><div class="rm-card" role="alertdialog" aria-modal="true" aria-labelledby="rmt" aria-describedby="rmp"><div class="rm-ic" aria-hidden="true">&#8377;</div><h3 id="rmt">Rate not entered</h3><p id="rmp"></p><ul id="rml"></ul><div class="rm-act"><button type="button" class="pri" id="rmadd">Add rate now</button><button type="button" class="alt" id="rmgo">Place order without rate</button></div><small>No problem if the rate isn&#8217;t known yet. It can be added later by editing the order.</small></div></div>
 <div id="usheet" aria-hidden="true"><div class="us-back" id="usback"></div><div class="us-panel" role="dialog" aria-modal="true" aria-label="Order update"><div class="us-grip" id="usgrip"><i></i></div><div class="us-body" id="usbody"></div></div></div>
 <div id="holder" class="hide"><div id="updbox">
   <div class="dh"><div><b id="dtitle"></b><small id="dsub"></small></div><button class="ib" id="dclose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
@@ -1403,6 +1422,26 @@ async function autoPo() {            // short numbers: SO-0001, SO-0002 ...
   const nums = orders.map(o => /^SO-(\d+)$/.exec(o.po_id || "")).filter(Boolean).map(m => +m[1]);
   return "SO-" + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(4, "0");
 }
+// ---- reminder when an item has no rate ----
+function askMissingRate(list) {
+  return new Promise(resolve => {
+    const m = $("ratemodal"), shown = list.slice(0, 5);
+    $("rmp").textContent = list.length === 1 ? "This item has no rate yet. Add it if you know it, or place the order without it." : list.length + " items have no rate yet. Add them if you know them, or place the order without them.";
+    $("rml").innerHTML = shown.map(r => `<li>${esc(r.item_description)} <small>\u00b7 ${esc(r.quantity)} ${esc(r.unit || "")}</small></li>`).join("") + (list.length > shown.length ? `<li><small>and ${list.length - shown.length} more</small></li>` : "");
+    const done = v => { m.classList.remove("open"); m.setAttribute("aria-hidden", "true"); document.removeEventListener("keydown", key, true); $("rmadd").onclick = $("rmgo").onclick = $("rmback").onclick = null; resolve(v); };
+    const key = e => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); done(false); } };
+    document.addEventListener("keydown", key, true);
+    $("rmadd").onclick = $("rmback").onclick = () => done(false);
+    $("rmgo").onclick = () => done(true);
+    m.setAttribute("aria-hidden", "false"); requestAnimationFrame(() => { m.classList.add("open"); setTimeout(() => $("rmadd").focus({ preventScroll: true }), 60); });
+  });
+}
+function flagMissingRate() {                     // points the sales person to the empty rate boxes
+  const boxes = [...document.querySelectorAll(".irow")].map(r => r.querySelector(".r")).filter(x => x && !(Number(x.value) > 0));
+  boxes.forEach(x => { x.classList.remove("need"); void x.offsetWidth; x.classList.add("need"); x.addEventListener("input", () => x.classList.remove("need"), { once: true }); });
+  if (boxes[0]) { boxes[0].scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(() => boxes[0].focus({ preventScroll: true }), 350); }
+}
+
 $("save").onclick = async () => {
   const msg = $("nmsg"); msg.textContent = "";
   if (!canNew()) { toast("You can't create or edit orders"); return; }
@@ -1412,6 +1451,10 @@ $("save").onclick = async () => {
   if (!co || !$("od").value) { msg.textContent = "Enter the company name and order date."; return; }
   if (!empName) { msg.textContent = "Select the sales person."; return; }
   if (!rows.length || rows.some(r => !r.item_description || !(Number(r.quantity) > 0))) { msg.textContent = "Each item needs a description and a quantity above 0."; return; }
+  if (!editing && canRate()) {                       // new order with a missing rate: ask first, never force
+    const miss = rows.filter(r => !(Number(r.rate) > 0));
+    if (miss.length && !(await askMissingRate(miss))) { flagMissingRate(); return; }
+  }
   if (!po) { po = await autoPo(); $("po").value = po; }
   const person = people.find(p => p.name === empName);
   const salesPhone = me.role === "Sales" ? me.phone : (person ? person.phone : null);
