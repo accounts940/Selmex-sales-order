@@ -488,7 +488,6 @@ header.top{background:#fffffff2;-webkit-backdrop-filter:none;backdrop-filter:non
 .kpi,.panel,.card,.og tbody,.lg,nav button,.chips button{backface-visibility:hidden;-webkit-font-smoothing:antialiased}
 .og tbody,.card,.panel{contain:layout paint}
 .card[open] .scroll,.scroll{-webkit-overflow-scrolling:touch}
-body{overflow-x:hidden}
 img,svg{image-rendering:auto}
 /* tab hidden or user idle: freeze every looping animation */
 html.rest *,html.rest *:before,html.rest *:after{animation-play-state:paused!important}
@@ -539,7 +538,7 @@ button:active:not(:disabled),.chips button:active,nav button:active{scale:.965;t
 
 /* ===================== installed app (PWA) ===================== */
 html{-webkit-text-size-adjust:100%;overscroll-behavior-y:contain}
-body{overscroll-behavior-y:contain;-webkit-tap-highlight-color:transparent}
+body{-webkit-tap-highlight-color:transparent}
 @media (display-mode:standalone){
   header.top{padding-top:calc(10px + env(safe-area-inset-top,0px));padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
   body{padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -556,8 +555,9 @@ body{overscroll-behavior-y:contain;-webkit-tap-highlight-color:transparent}
 /* ===================== phone + tablet layout (laptop / desktop untouched) ===================== */
 .ocards,#usheet{display:none}
 @media (max-width:820px){
-  html,body{max-width:100%;overflow-x:hidden}
-  body.noscroll{overflow:hidden}
+  html,body{max-width:100%}
+  #app{overflow-x:clip}
+  html.noscroll,html.noscroll body{overflow:hidden}
   /* header: everything fits on one line */
   header.top{gap:8px;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top,0px))}
   .logo{height:32px}
@@ -1211,14 +1211,15 @@ const home = () => $("new").querySelector(".lcol");
 const sheet = { el: null, open: false };
 function sheetOpen(box) {
   const sh = $("usheet"); $("usbody").appendChild(box); sh.classList.remove("drag"); sh.querySelector(".us-panel").style.transform = "";
-  sh.setAttribute("aria-hidden", "false"); document.body.classList.add("noscroll");
+  sh.setAttribute("aria-hidden", "false"); document.documentElement.classList.add("noscroll");
   requestAnimationFrame(() => requestAnimationFrame(() => sh.classList.add("open"))); sheet.open = true;
 }
 function sheetClose() {
   if (!sheet.open) return; const sh = $("usheet");
   sh.classList.remove("open", "drag"); sh.querySelector(".us-panel").style.transform = ""; sh.setAttribute("aria-hidden", "true");
-  document.body.classList.remove("noscroll"); sheet.open = false;
+  document.documentElement.classList.remove("noscroll"); sheet.open = false;
 }
+document.addEventListener("touchstart", () => { if (!sheet.open) document.documentElement.classList.remove("noscroll"); }, { passive: true });   // safety net: a closed sheet never leaves scrolling locked
 function dismissSheet() { if (!inl) { sheetClose(); return; } if (inl.type === "edit") { resetForm(); show("orders"); } else closeUpdate(); }
 $("usback").onclick = dismissSheet;
 (function () {                                   // drag the handle down to close
