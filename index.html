@@ -552,6 +552,110 @@ body{overscroll-behavior-y:contain;-webkit-tap-highlight-color:transparent}
 #pwaBar button{padding:8px 14px;border-radius:10px}#pwaBar .no{background:#eef0fb;color:var(--blue);padding:8px 10px}
 #offline{position:fixed;top:0;left:0;right:0;z-index:250;background:#a85d00;color:#fff;text-align:center;font-size:13px;font-weight:600;padding:calc(6px + env(safe-area-inset-top,0px)) 12px 6px;transform:translateY(-100%);transition:transform .3s}
 #offline.show{transform:none}
+
+/* ===================== phone + tablet layout (laptop / desktop untouched) ===================== */
+.ocards,#usheet{display:none}
+@media (max-width:820px){
+  html,body{max-width:100%;overflow-x:hidden}
+  body.noscroll{overflow:hidden}
+  /* header: everything fits on one line */
+  header.top{gap:8px;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top,0px))}
+  .logo{height:32px}
+  .ttl{font-size:14px;padding-left:10px;white-space:nowrap}
+  .sp{flex:1;min-width:0}
+  .av{width:34px;height:34px;flex:none}
+  .ib{padding:8px;flex:none;min-width:38px;min-height:38px}
+  .live{margin:0}
+  /* tabs: one tidy row, big thumb targets */
+  nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 12px;margin-top:12px}
+  nav button{padding:12px 6px;text-align:center;font-size:14px;min-height:44px}
+  main{padding:14px 12px 96px}
+  .hello{font-size:20px}
+  .panel{padding:14px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .kpi{padding:12px;gap:10px;min-width:0}
+  .kpi b{font-size:26px}
+  .bar{gap:8px}
+  .srch{min-width:0;flex-basis:100%}
+  .chips{flex-wrap:nowrap;overflow-x:auto;max-width:100%;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .chips::-webkit-scrollbar{display:none}
+  .chips button{flex:none;min-height:40px}
+  .fbar{gap:8px}.ff{flex:1;min-width:calc(50% - 8px)}.ff select,.ff input{min-width:0;width:100%}
+  .cnt{margin-left:0;width:100%}
+  input,select,textarea{font-size:16px}              /* stops iPhone zooming in on every field */
+  button.pri,button.alt{min-height:44px}
+  #totop{right:14px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:44px;height:44px}
+  #toast,#ppop{z-index:420}
+  #ppop{top:calc(12px + env(safe-area-inset-top,0px));bottom:auto;right:12px;left:12px;width:auto;transform:translateY(-14px)}
+  #ppop.show{transform:none}
+  .ghead{margin:16px 0 8px}.ghead .dtoggle{margin-left:0}
+
+  /* ---------- order cards (replace the wide table) ---------- */
+  .ocards{display:grid;gap:12px;margin-bottom:14px}
+  .ocard{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--sh);padding:14px;display:grid;gap:10px;min-width:0;transition:box-shadow .25s var(--ease),transform .25s var(--ease)}
+  .ocard:active{box-shadow:0 2px 10px #1b1f4a1f}
+  .oc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .oc-top b.po{color:var(--blue);font-size:16px;display:block;word-break:break-word}
+  .oc-top small{color:var(--mut);font-size:12.5px}
+  .oc-top .st{text-align:right;display:grid;gap:4px;justify-items:end;min-width:0}
+  .oc-co{font-weight:600;line-height:1.3}.oc-co small{display:block;color:var(--mut);font-weight:500;font-size:12.5px;margin-top:2px}
+  .oc-items{display:grid;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .oi{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;background:#fbfbff}
+  .oi+.oi{border-top:1px solid var(--line)}
+  .oi-main{min-width:0;display:grid;gap:2px}.oi-main b{font-weight:600;line-height:1.3;word-break:break-word}
+  .oi-main small,.oi-q small{color:var(--mut);font-size:12.5px}
+  .oi-q{text-align:right;flex:none;display:grid;gap:2px;align-content:start}.oi-q b{white-space:nowrap}
+  .oc-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .oc-foot .dl{font-size:13px;color:var(--mut)}.oc-foot .dl b{color:var(--ink);font-weight:600}
+  .oc-act{display:grid;grid-template-columns:1fr auto;gap:8px}.oc-act:has(button:only-child){grid-template-columns:1fr}
+  .oc-act button{padding:12px 16px;font-size:15px;border-radius:12px}
+  .ocard.flash{animation:cardflash 1.3s var(--ease) both}
+  @keyframes cardflash{0%{background:#e3e7ff}100%{background:#fff}}
+  .enter .ocard{animation:rowin .42s var(--ease) both;animation-delay:calc(var(--i,0)*45ms)}
+
+  /* ---------- update / edit sheet ---------- */
+  #usheet{display:block;position:fixed;inset:0;z-index:300;visibility:hidden;pointer-events:none}
+  #usheet.open{visibility:visible;pointer-events:auto}
+  .us-back{position:absolute;inset:0;background:#10123a8c;opacity:0;transition:opacity .3s var(--ease)}
+  #usheet.open .us-back{opacity:1}
+  .us-panel{position:absolute;left:0;right:0;bottom:0;max-height:94dvh;height:94dvh;background:#fafaff;border-radius:22px 22px 0 0;box-shadow:0 -18px 50px #10123a55;display:flex;flex-direction:column;transform:translateY(105%);transition:transform .42s var(--ease);will-change:transform;padding-bottom:env(safe-area-inset-bottom,0px)}
+  #usheet.open .us-panel{transform:none}
+  #usheet.drag .us-panel{transition:none}
+  .us-grip{flex:none;padding:10px 0 4px;display:grid;place-items:center;touch-action:none;cursor:grab}
+  .us-grip i{display:block;width:44px;height:5px;border-radius:9px;background:#c9ccf0}
+  .us-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  #usbody>#updbox,#usbody>#editbox{display:flex;flex-direction:column;flex:1;min-height:0;height:100%;border:0;box-shadow:none;border-radius:0;background:transparent;margin:0;padding:0}
+  #usbody #updbox .dh{padding:4px 16px 12px;border-bottom:1px solid var(--line);flex:none}
+  #usbody #updbox .dh b{font-size:16px;line-height:1.25;display:block;word-break:break-word}
+  #usbody #updbox .db{padding:14px 16px 24px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;flex:1}
+  #usbody #editbox{overflow-y:auto;overscroll-behavior:contain;padding:6px 14px 28px}
+  #usbody .stepper{margin:2px 0 10px}.stp small{font-size:11px}
+  #usbody h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:16px 0 8px}
+  /* item rows: name on top, big status picker underneath */
+  #usbody .di{flex-direction:column;align-items:stretch;gap:8px;padding:12px}
+  #usbody .di select{width:100%;min-height:46px;font-weight:600}
+  #usbody .di>.b{align-self:flex-start}
+  .dquick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:0 0 10px}
+  .dquick button{background:#fff;border:1px solid var(--line);color:var(--blue);border-radius:12px;padding:10px 4px;font-size:13px;line-height:1.2;min-height:44px;text-align:center}
+  .dquick button:active{background:#eef0fb}
+  .dquick p{margin:0;font-size:12px;color:var(--mut);grid-column:1/-1}
+  /* the Save button stays visible, no long scroll to reach it */
+  #usbody #dform{display:block}
+  #usbody #dsave{position:sticky;bottom:0;width:100%;min-height:50px;font-size:16px;margin-top:6px;box-shadow:0 -10px 18px #fafaffee,0 8px 20px #2e319240}
+  #usbody details.hist>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  #usbody details.hist>summary::-webkit-details-marker{display:none}
+  #usbody details.hist>summary h3{margin:0}
+  #usbody details.hist>summary:after{content:"\25BE";color:var(--mut);transition:transform .25s var(--ease)}
+  #usbody details.hist[open]>summary:after{transform:rotate(180deg)}
+  #usbody details.hist .tl{margin-top:10px}
+}
+@media (max-width:430px){.ttl{display:none}.kpi b{font-size:24px}}
+@media (min-width:821px){
+  details.hist>summary{list-style:none;pointer-events:none}details.hist>summary::-webkit-details-marker{display:none}
+  details.hist>summary h3{margin:inherit}
+  .dquick{display:none!important}
+}
+.dquick.hide{display:none!important}
 </style>
 </head>
 <body>
@@ -670,11 +774,14 @@ body{overscroll-behavior-y:contain;-webkit-tap-highlight-color:transparent}
     </section>
   </main>
 </div>
+<div id="usheet" aria-hidden="true"><div class="us-back" id="usback"></div><div class="us-panel" role="dialog" aria-modal="true" aria-label="Order update"><div class="us-grip" id="usgrip"><i></i></div><div class="us-body" id="usbody"></div></div></div>
 <div id="holder" class="hide"><div id="updbox">
   <div class="dh"><div><b id="dtitle"></b><small id="dsub"></small></div><button class="ib" id="dclose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
   <div class="db">
     <div id="dstep" class="stepper"></div>
-    <h3>Items and progress</h3><div id="ditems"></div>
+    <h3>Items and progress</h3>
+    <div id="dquick" class="dquick hide" role="group" aria-label="Set every item at once"><p>Set every item to:</p><button type="button" data-all="In Production">In production</button><button type="button" data-all="Done">Done</button><button type="button" data-all="Dispatched">Dispatched</button></div>
+    <div id="ditems"></div>
     <div id="dform">
       <h3>Add an update</h3>
       <div class="f"><label for="dact">Current action</label><input id="dact" placeholder="e.g. Slitting on machine 2"></div>
@@ -682,7 +789,7 @@ body{overscroll-behavior-y:contain;-webkit-tap-highlight-color:transparent}
       <div class="f"><label for="dnote">Notes</label><textarea id="dnote" rows="3" placeholder="Anything the sales team should know"></textarea></div>
       <button id="dsave" type="button">Save update</button>
     </div>
-    <h3>History</h3><div id="dlog" class="tl"></div>
+    <details class="hist" id="dhist" open><summary><h3>History</h3></summary><div id="dlog" class="tl"></div></details>
   </div>
 </div></div>
 <div id="camov" class="hide"><div class="cambox"><video id="camvid" autoplay playsinline muted></video><canvas id="camcv" class="hide"></canvas>
@@ -916,8 +1023,25 @@ function pgHtml(oid) {
   const p = prog(oid); if (!p.partial) return "";
   return `<span class="pg"><span class="b partial">Partial</span><span class="pgb"><i style="width:${Math.round(p.fin / p.n * 100)}%"></i></span><small>${progText(p)}</small></span>`;
 }
+const compact = () => matchMedia("(max-width:820px)").matches;
+function ordCards(list, full, tab) {
+  let n = 0;
+  return '<div class="ocards">' + list.map(o => {
+    let its = itemsOf(o.id), tabView = !!tab;
+    if (tab) { const m = its.filter(i => istOf(i) === TABMAP[tab]); if (m.length) its = m; else tabView = false; }
+    const multi = !tabView && its.length > 1;
+    const rows = its.map(it => `<div class="oi"><div class="oi-main"><b>${esc(it.item_description || "-")}</b>${multi && it.id ? `<span class="b ist ${String(it.item_status || "Pending").replace(/\s/g, "").toLowerCase()}">${esc(it.item_status || "Pending")}</span>` : ""}${it.micron ? `<small>${esc(it.micron)}</small>` : ""}${it.size ? `<small>${esc(it.size)}</small>` : ""}</div>` +
+      `<div class="oi-q"><b>${it.quantity != null ? esc(it.quantity) + " " + esc(it.unit || "") : ""}</b>${canRate() && it.rate != null && it.rate !== "" ? `<small>${money(it.rate)}${it.quantity ? " \u00b7 " + money(it.rate * it.quantity) : ""}</small>` : ""}</div></div>`).join("");
+    const act = full ? `<div class="oc-act"><button class="pri" data-upd="${o.id}" type="button">${canUpd() ? "Update" : "Track"}</button>${canEdit(o) ? `<button class="alt" data-edit="${o.id}" type="button">Edit</button>` : ""}</div>` : "";
+    return `<article class="ocard" data-oid="${o.id}" style="--i:${Math.min(n++, 14)}"><div class="oc-top"><div><b class="po">${esc(o.po_id)}</b><small>${fmt(o.order_date)}</small></div><div class="st">${tabView ? badge(tab) + otherNote(o.id, tab) : badge(o.status) + pgHtml(o.id)}</div></div>` +
+      `<div class="oc-co">${esc(o.company_name)}<small>${esc(title(o.assigned_employee))}</small>${noteHtml(o)}</div>` +
+      (rows ? `<div class="oc-items">${rows}</div>` : "") +
+      `<div class="oc-foot"><span class="dl">Delivery <b>${fmt(o.delivery_date)}</b></span>${isOverdue(o) ? '<span class="b late">Overdue</span>' : ""}</div>${act}</article>`;
+  }).join("") + "</div>";
+}
 function ordTable(list, full, tab, pinId) {
   if (!list.length) return '<p class="empty">None</p>';
+  if (compact()) return ordCards(list, full, tab);
   const head = ["Order", "Company", "Item", "Size", "Qty"].concat(canRate() ? ["Rate"] : [], ["Delivery", "Status"], full ? ["Actions"] : []);
   const cells = (it, multi) => `<td>${esc(it.item_description || "-")}${multi && it.id ? `<span class="b ist ${String(it.item_status || "Pending").replace(/\s/g, "").toLowerCase()}">${esc(it.item_status || "Pending")}</span>` : ""}${it.micron ? `<small class="mi">${esc(it.micron)}</small>` : ""}</td><td>${esc(it.size)}</td><td class="q">${it.quantity != null ? esc(it.quantity) + " " + esc(it.unit || "") : ""}</td>` +
     (canRate() ? `<td class="q">${it.rate != null && it.rate !== "" ? money(it.rate) + (it.quantity ? `<small class="mi">Total ${money(it.rate * it.quantity)}</small>` : "") : "—"}</td>` : "");
@@ -979,7 +1103,7 @@ function renderDash() {
 
 let lastOSig = null, flashId = null;
 function renderOrders() {
-  stash();
+  stash(true);
   const q = $("q").value.toLowerCase(), cur = $("fsp").value, dt = $("fdt").value;
   const names = [...new Set(orders.map(o => o.assigned_employee).filter(Boolean))].sort();
   $("fsp").innerHTML = '<option value="">All</option>' + names.map(n => `<option value="${esc(n)}"${n === cur ? " selected" : ""}>${esc(title(n))}</option>`).join("");
@@ -999,7 +1123,7 @@ function renderOrders() {
   const sig = [fstat, $("fsp").value, $("fdt").value, onlyToday, onlyDay, onlyRecentDisp].join("|"), ol = $("olist");
   if (lastOSig !== null && sig !== lastOSig) { ol.classList.add("enter"); clearTimeout(renderOrders.t); renderOrders.t = setTimeout(() => ol.classList.remove("enter"), 900); }
   lastOSig = sig;
-  if (flashId) { const fr = ol.querySelector(`tbody[data-oid="${flashId}"]`); if (fr) { fr.classList.add("flash"); setTimeout(() => fr.classList.remove("flash"), 1400); } flashId = null; }
+  if (flashId) { const fr = ol.querySelector(`[data-oid="${flashId}"]`); if (fr) { fr.classList.add("flash"); setTimeout(() => fr.classList.remove("flash"), 1400); } flashId = null; }
   placeInline();
 }
 $("fsp").onchange = renderOrders; $("fdt").onchange = renderOrders;
@@ -1084,14 +1208,37 @@ const itemChange = async (e, sel) => {
 // ---- inline panels (Update / Track / Edit open under the order row) ----
 let updId = null, inl = null;
 const home = () => $("new").querySelector(".lcol");
-function stash() {                       // move the boxes back to their hidden homes
+const sheet = { el: null, open: false };
+function sheetOpen(box) {
+  const sh = $("usheet"); $("usbody").appendChild(box); sh.classList.remove("drag"); sh.querySelector(".us-panel").style.transform = "";
+  sh.setAttribute("aria-hidden", "false"); document.body.classList.add("noscroll");
+  requestAnimationFrame(() => requestAnimationFrame(() => sh.classList.add("open"))); sheet.open = true;
+}
+function sheetClose() {
+  if (!sheet.open) return; const sh = $("usheet");
+  sh.classList.remove("open", "drag"); sh.querySelector(".us-panel").style.transform = ""; sh.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("noscroll"); sheet.open = false;
+}
+function dismissSheet() { if (!inl) { sheetClose(); return; } if (inl.type === "edit") { resetForm(); show("orders"); } else closeUpdate(); }
+$("usback").onclick = dismissSheet;
+(function () {                                   // drag the handle down to close
+  const g = $("usgrip"), pn = g.parentElement, sh = $("usheet"); let y0 = null, dy = 0;
+  g.addEventListener("touchstart", e => { y0 = e.touches[0].clientY; dy = 0; sh.classList.add("drag"); }, { passive: true });
+  g.addEventListener("touchmove", e => { if (y0 == null) return; dy = Math.max(0, e.touches[0].clientY - y0); pn.style.transform = `translateY(${dy}px)`; }, { passive: true });
+  const end = () => { if (y0 == null) return; y0 = null; sh.classList.remove("drag"); if (dy > 110) dismissSheet(); else pn.style.transform = ""; };
+  g.addEventListener("touchend", end); g.addEventListener("touchcancel", end);
+})();
+function stash(keepSheet) {              // move the boxes back to their hidden homes
   const eb = $("editbox"), ub = $("updbox");
-  if (eb.parentElement !== home()) home().appendChild(eb);
-  if (ub.parentElement !== $("holder")) $("holder").appendChild(ub);
   document.querySelectorAll("tbody.inl").forEach(x => x.remove());
+  if (keepSheet && sheet.open) return;                       // list re-drawn behind an open sheet: leave the sheet alone
+  const moveHome = () => { if (eb.parentElement !== home()) home().appendChild(eb); if (ub.parentElement !== $("holder")) $("holder").appendChild(ub); };
+  if (sheet.open) { sheetClose(); setTimeout(() => { if (!sheet.open && !inl) moveHome(); }, 460); }   // let it slide away first
+  else moveHome();
 }
 function placeInline() {
   if (!inl) return;
+  if (compact()) { if (!sheet.open) sheetOpen(inl.type === "edit" ? $("editbox") : $("updbox")); return; }   // phones and tablets: slide-up sheet instead of a wide inline panel
   const row = $("olist").querySelector(`tbody[data-oid="${inl.id}"]`); if (!row) return;
   const cols = row.closest("table").dataset.cols || 8;
   const tb = document.createElement("tbody"); tb.className = "inl";
@@ -1112,6 +1259,7 @@ function drawItems() {
   const sf = $("dstep").querySelector(".stp-line i");
   requestAnimationFrame(() => requestAnimationFrame(() => { sf.style.width = (si / 3 * 100) + "%"; }));
   const its = itemsOf(updId);
+  $("dquick").classList.toggle("hide", !(canUpd() && its.length > 1));
   const pp = prog(updId), pbox = pp.partial ? `<div class="pgbox"><div class="d"><b>Done / dispatched (${pp.fin})</b>${[...pp.disp, ...pp.done].map(nm).join(", ")}</div><div class="l"><b>Still left (${pp.left.length})</b>${pp.left.map(nm).join(", ")}</div></div>` : "";
   $("ditems").innerHTML = pbox + its.map(i => `<div class="di"><div><b>${esc(i.item_description)}</b><small>${[i.micron, i.size].filter(Boolean).map(esc).join(" · ")}${i.micron || i.size ? " · " : ""}${esc(i.quantity)} ${esc(i.unit || "")}${canRate() && i.rate != null ? " · " + money(i.rate) + " each" : ""}</small></div>` +
     (canUpd() ? `<select data-item="${i.id}" aria-label="Item status">${ISTAT.map(x => `<option${x === i.item_status ? " selected" : ""}>${x}</option>`).join("")}</select>` : badge(i.item_status || "Pending")) + `</div>`).join("") || '<p class="empty">No items</p>';
@@ -1132,11 +1280,25 @@ function openUpdate(id) {
   updId = id; inl = { type: "upd", id };
   drawItems();
   $("dform").classList.toggle("hide", !canUpd());
+  $("dhist").open = !compact();                      // history is tucked away on phones so the page stays short
   ["dact", "dhold", "dnote"].forEach(x => $(x).value = "");
   placeInline(); loadLog(id);
 }
 function closeUpdate() { homeEdit(); }
 $("dclose").onclick = closeUpdate;
+$("dquick").onclick = async e => {                  // one tap sets every item (saved one by one, exactly like the item pickers)
+  const b = e.target.closest("button[data-all]"); if (!b || !updId || !canUpd()) return;
+  const v = b.dataset.all, sels = [...$("ditems").querySelectorAll("select[data-item]")].filter(x => x.value !== v);
+  if (!sels.length) { toast("All items are already " + (v === "Done" ? "Done" : v)); return; }
+  $("dquick").querySelectorAll("button").forEach(x => x.disabled = true);
+  for (const sel of sels) {
+    if (!document.body.contains(sel)) break;
+    sel.value = v; sel.dispatchEvent(new Event("change", { bubbles: true }));
+    for (let k = 0; k < 100 && sel.dataset.busy; k++) await new Promise(r => setTimeout(r, 50));
+  }
+  $("dquick").querySelectorAll("button").forEach(x => x.disabled = false);
+};
+matchMedia("(max-width:820px)").addEventListener("change", () => { try { const keep = inl; renderDash(); renderOrders(); if (keep && !inl) { inl = keep; placeInline(); } } catch (_) {} });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && inl) { inl.type === "edit" ? (resetForm(), show("orders")) : closeUpdate(); } });
 $("dsave").onclick = async () => {
   if (!canUpd() || !updId) return;
@@ -1543,7 +1705,7 @@ $("note").addEventListener("input", () => { $("notecnt").textContent = $("note")
   const io = "IntersectionObserver" in window ? new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("rv-in"); io.unobserve(e.target); } }), { threshold: .06, rootMargin: "0px 0px -5% 0px" }) : null;
   window.armReveal = () => {
     if (!io || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    document.querySelectorAll("#secs .sec, #olist tbody:not(.inl), #olist .ghead").forEach(el => {
+    document.querySelectorAll("#secs .sec, #olist tbody:not(.inl), #olist .ocard, #olist .ghead").forEach(el => {
       if (el.classList.contains("rv") || el.getBoundingClientRect().top < innerHeight) return;
       el.classList.add("rv"); io.observe(el);
     });
