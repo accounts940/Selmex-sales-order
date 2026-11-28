@@ -683,6 +683,7 @@ body{-webkit-tap-highlight-color:transparent}
   .kpi,.panel{box-shadow:0 1px 2px #1b1f4a0d,0 4px 14px #1b1f4a10}
 }
 @media (pointer:coarse){html{scroll-behavior:auto}.scroll{scroll-behavior:auto}}
+.morebar{display:flex;justify-content:center;margin:4px 0 18px}.morebar button{padding:11px 22px;border-radius:99px;min-height:44px}
 </style>
 </head>
 <body>
@@ -920,8 +921,9 @@ const DISPATCH_KEEP_DAYS = 4;
 const within = (d, days) => Date.now() - new Date(d) < days * 864e5;
 const dispAt = o => o.dispatched_at || o.completed_at || o.created_at;
 const matches = (o, q) => !q || [o.po_id, o.company_name, o.assigned_employee, o.note].join(" ").toLowerCase().includes(q) ||
-  items.some(i => i.order_id === o.id && (i.item_description || "").toLowerCase().includes(q));
-function toast(t) { const e = $("toast"); e.textContent = t; e.classList.add("show"); setTimeout(() => e.classList.remove("show"), 2800); }
+  itemsOf(o.id).some(i => (i.item_description || "").toLowerCase().includes(q));
+let toastT;
+function toast(t) { const e = $("toast"); e.textContent = t; e.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove("show"), 2800); }
 
 // ---- sign in ----
 async function splashRun(fn) {          // short animated screen while the dashboard loads
@@ -935,8 +937,10 @@ async function boot() {
     $("login").classList.remove("hide"); pwReset(); $("lmsg").className = "msg okmsg"; $("lmsg").textContent = "You have been signed out.";
     return;
   }
-  const { data } = await db.auth.getSession();
-  if (data.session) await splashRun(() => start(data.session.user.email)); else $("login").classList.remove("hide"); pwReset();
+  try {
+    const { data } = await db.auth.getSession();
+    if (data.session) await splashRun(() => start(data.session.user.email)); else $("login").classList.remove("hide"); pwReset();
+  } catch (e) { $("login").classList.remove("hide"); $("lmsg").textContent = "Could not start: " + (e.message || e) + ". Check the internet and reload."; }
 }
 const shake = () => { const bx = document.querySelector("#login .box"); bx.classList.remove("shake"); void bx.offsetWidth; bx.classList.add("shake"); };
 $("go").onclick = async () => {
@@ -947,7 +951,11 @@ $("go").onclick = async () => {
   btn.disabled = false; btn.textContent = "Sign in";
   if (error) { $("lmsg").textContent = "Sign in failed: " + error.message; shake(); return; }
   $("login").classList.add("leaving");
-  setTimeout(async () => { await splashRun(() => start(data.user.email)); $("login").classList.remove("leaving"); }, 300);
+  setTimeout(async () => {
+    try { await splashRun(() => start(data.user.email)); }
+    catch (e) { $("lmsg").className = "msg"; $("lmsg").textContent = "Could not load: " + (e.message || e) + ". Check the internet and try again."; }
+    finally { $("login").classList.remove("leaving"); }
+  }, 300);
 };
 const pwToggle = () => {
   const pwEl = $("pw"), btn = $("pwt"), show = pwEl.type === "password", a = pwEl.selectionStart, z = pwEl.selectionEnd;
@@ -970,11 +978,16 @@ $("out").onclick = async () => {
   sessionStorage.clear(); sessionStorage.setItem("selmex_signedout", "1");
   location.replace(location.pathname);
 };
-$("refresh").onclick = async () => { await load(); toast("Refreshed"); };
+$("refresh").onclick = async () => { const ok = await load(); if (ok !== false) toast("Refreshed"); };
 
 async function start(email) {
   const { data, error } = await db.from("profiles").select("name,email,role,phone").eq("email", email.toLowerCase()).maybeSingle();
-  if (error || !data) {
+  if (error) {                                       // server not reachable / temporary problem: keep the sign-in, just tell the person
+    $("login").classList.remove("hide"); pwReset(); $("app").classList.add("hide");
+    $("lmsg").className = "msg"; $("lmsg").textContent = "Could not load your profile (" + error.message + "). Check the internet, then open the app again.";
+    return;
+  }
+  if (!data) {
     await db.auth.signOut();
     $("login").classList.remove("hide"); pwReset(); $("app").classList.add("hide");
     $("lmsg").textContent = "No role is set for this email. Ask Management to add you.";
@@ -982,7 +995,7 @@ async function start(email) {
   }
   me = data;
   $("login").classList.add("hide"); $("app").classList.remove("hide");
-  $("un").textContent = title(me.name); $("ur").textContent = me.role; $("av").textContent = me.name.trim().charAt(0).toUpperCase();
+  $("un").textContent = title(me.name); $("ur").textContent = me.role; $("av").textContent = String(me.name || "?").trim().charAt(0).toUpperCase();
   document.body.classList.toggle("norate", !canRate());
   if (!canNew()) $("tnew").classList.add("hide");
 
@@ -1014,21 +1027,32 @@ async function load(opts) {
     $("livet").textContent = "Updated " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
 }
+// the database returns at most 1000 rows per request: read every page so nothing silently goes missing as the history grows
+async function fetchAll(table, col, asc) {
+  const out = [], size = 1000;
+  for (let from = 0; from < 100000; from += size) {
+    const r = await db.from(table).select("*").order(col, { ascending: asc }).order("id").range(from, from + size - 1);
+    if (r.error) return { data: null, error: r.error };
+    out.push(...r.data); if (r.data.length < size) break;
+  }
+  return { data: out, error: null };
+}
+let loadSeq = 0;
 async function loadData(opts) {
-  const [o, i] = await Promise.all([
-    db.from("orders").select("*").order("created_at", { ascending: false }),
-    db.from("order_items").select("*").order("id")
-  ]);
-  if (o.error || i.error) { toast("Could not load data: " + (o.error || i.error).message); return; }
+  const silent = !!(opts && opts.silent), seq = ++loadSeq;
+  const [o, i] = await Promise.all([fetchAll("orders", "created_at", false), fetchAll("order_items", "id", true)]);
+  if (seq !== loadSeq) return;                                // a newer load started meanwhile: it will show the latest data
+  if (o.error || i.error) { if (!silent) toast("Could not load data: " + (o.error || i.error).message); return false; }
   const sig = JSON.stringify([o.data, i.data]);
   if (opts && opts.silent && sig === lastSig) return;        // nothing changed: leave the screen alone
   lastSig = sig;
   if (firstLoad) { firstLoad = false; enterAnim(); }
   const derive = st => st.every(v => v === "Dispatched") ? "Dispatched" : st.every(v => v === "Done" || v === "Dispatched") ? "Completed" : st.some(v => v !== "Pending") ? "In Production" : "Pending";
+  const byOrder = new Map(); i.data.forEach(y => { let a = byOrder.get(y.order_id); if (!a) byOrder.set(y.order_id, a = []); a.push(y.item_status || "Pending"); });
   orders = o.data.map(x => {
     if (x.status === "Confirmed") x = { ...x, status: "Pending" };
     if (x.status === "Pending" || x.status === "In Production" || x.status === "Completed") {      // an order follows its items
-      const st = i.data.filter(y => y.order_id === x.id).map(y => y.item_status || "Pending");
+      const st = byOrder.get(x.id) || [];
       if (st.length) { const ds = derive(st);
         if (ds !== x.status) { const back = x.status === "Completed" && ds !== "Completed" && ds !== "Dispatched"; x = { ...x, status: ds }; if (back) x.completed_at = null; if (canUpd()) db.from("orders").update(back ? { status: ds, completed_at: null } : { status: ds }).eq("id", x.id).then(r => { if (r.error && back) db.from("orders").update({ status: ds }).eq("id", x.id).then(() => {}); }); } }
     }
@@ -1036,6 +1060,7 @@ async function loadData(opts) {
   });
   items = i.data; rateCol = items.length > 0 && "rate" in items[0]; noteCol = o.data.length > 0 && "note" in o.data[0];
   renderDash(); renderOrders();
+  return true;
 }
 
 const IC = {
@@ -1144,10 +1169,12 @@ function renderDash() {
   $("secs").innerHTML = tp + P.map(p => `<div class="panel sec ${p[3]}"><h2>${p[0]} (${p[2].length})</h2><p class="hint">${p[1]}</p>${secTable(p[2])}</div>`).join("");
 }
 
-let lastOSig = null, flashId = null;
+let lastOSig = null, flashId = null, moreSig = null, moreN = {};
+const PAGE = 40;
 function renderOrders() {
   stash(true);
-  const q = $("q").value.toLowerCase(), cur = $("fsp").value, dt = $("fdt").value;
+  const q = $("q").value.toLowerCase().trim(), cur = $("fsp").value, dt = $("fdt").value;
+  const msig = [fstat, cur, dt, onlyToday, onlyDay, onlyRecentDisp, q].join("|"); if (msig !== moreSig) { moreSig = msig; moreN = {}; }
   const names = [...new Set(orders.map(o => o.assigned_employee).filter(Boolean))].sort();
   $("fsp").innerHTML = '<option value="">All</option>' + names.map(n => `<option value="${esc(n)}"${n === cur ? " selected" : ""}>${esc(title(n))}</option>`).join("");
   const list = orders.filter(o => (!fstat || hasTab(o, fstat)) && (!onlyRecentDisp || o.status !== "Dispatched" || within(dispAt(o), DISPATCH_KEEP_DAYS)) && (!onlyToday || placedToday(o)) && (!onlyDay || placedOn(o, onlyDay)) && matches(o, q) && (!$("fsp").value || o.assigned_employee === $("fsp").value) && (!dt || o.delivery_date === dt));
@@ -1158,10 +1185,15 @@ function renderOrders() {
     ["Dispatched", "Left the factory", o => o.status === "Dispatched"]];
   const TH = { "Pending": ["Pending", "Items not started yet"], "In Production": ["In production", "Items being made right now"], "Completed": ["Completed items", "Production finished, waiting to be dispatched"], "Dispatched": ["Dispatched items", "Left the factory"] };
   const pin = inl && orders.find(x => x.id === inl.id);
+  const lim = (l, key, tab) => {                  // first 40, then a button: keeps the page light even with hundreds of orders
+    const max = PAGE * (1 + (moreN[key] || 0)); let part = l.length > max ? l.slice(0, max) : l;
+    if (part !== l && pin && l.includes(pin) && !part.includes(pin)) part = part.concat(pin);
+    return ordTable(part, true, tab) + (l.length > part.length ? `<div class="morebar"><button type="button" class="alt" data-more="${esc(key)}">Show ${Math.min(PAGE, l.length - max)} more \u00b7 ${l.length - max} left</button></div>` : "");
+  };
   if (fstat && pin && !list.includes(pin)) list.push(pin);       // keep the order you are updating on screen, even if its item just moved to another tab
-  $("olist").innerHTML = list.length ? (fstat ? `<div class="ghead"><h2>${TH[fstat][0]}${fstat === "Dispatched" && onlyRecentDisp ? " \u00b7 last " + DISPATCH_KEEP_DAYS + " days" : ""} (${list.length})</h2><span>${TH[fstat][1]}</span>${fstat === "Dispatched" ? `<button type="button" class="alt dtoggle" data-dtoggle>${onlyRecentDisp ? "Show all dispatched" : "Show last " + DISPATCH_KEEP_DAYS + " days only"}</button>` : ""}</div>` + ordTable(list, true, fstat) : G.map(g => {
+  $("olist").innerHTML = list.length ? (fstat ? `<div class="ghead"><h2>${TH[fstat][0]}${fstat === "Dispatched" && onlyRecentDisp ? " \u00b7 last " + DISPATCH_KEEP_DAYS + " days" : ""} (${list.length})</h2><span>${TH[fstat][1]}</span>${fstat === "Dispatched" ? `<button type="button" class="alt dtoggle" data-dtoggle>${onlyRecentDisp ? "Show all dispatched" : "Show last " + DISPATCH_KEEP_DAYS + " days only"}</button>` : ""}</div>` + lim(list, "tab", fstat) : G.map(g => {
     const l = list.filter(g[2]);
-    return l.length ? `<div class="ghead"><h2>${g[0]} (${l.length})</h2><span>${g[1]}</span></div>` + ordTable(l, true) : "";
+    return l.length ? `<div class="ghead"><h2>${g[0]} (${l.length})</h2><span>${g[1]}</span></div>` + lim(l, g[0]) : "";
   }).join("")) : '<p class="empty">No orders match. Change the search or the filters.</p>';
   const sig = [fstat, $("fsp").value, $("fdt").value, onlyToday, onlyDay, onlyRecentDisp].join("|"), ol = $("olist");
   if (lastOSig !== null && sig !== lastOSig) { ol.classList.add("enter"); clearTimeout(renderOrders.t); renderOrders.t = setTimeout(() => ol.classList.remove("enter"), 900); }
@@ -1178,7 +1210,7 @@ $("fclear").onclick = () => {
 const lazy = (fn, ms = 130) => { let t; return () => { clearTimeout(t); t = setTimeout(() => requestAnimationFrame(fn), ms); }; };
 $("q").oninput = lazy(renderOrders);
 $("dq").oninput = lazy(renderDash);
-$("olist").addEventListener("click", e => { if (e.target.closest("[data-dtoggle]")) { onlyRecentDisp = !onlyRecentDisp; renderOrders(); } });
+$("olist").addEventListener("click", e => { const mb = e.target.closest("[data-more]"); if (mb) { moreN[mb.dataset.more] = (moreN[mb.dataset.more] || 0) + 1; renderOrders(); return; } if (e.target.closest("[data-dtoggle]")) { onlyRecentDisp = !onlyRecentDisp; renderOrders(); } });
 $("kpis").onclick = e => {
   const k = e.target.closest("[data-go]"); if (!k) return;
   onlyToday = k.dataset.go === "Today"; onlyDay = null; fstat = onlyToday ? "" : k.dataset.go; onlyRecentDisp = fstat === "Dispatched";
@@ -1224,8 +1256,9 @@ const onItemChange = async e => {
 const itemChange = async (e, sel) => {
   if (!canUpd()) { toast("You can't change status"); return; }
   const it0 = items.find(x => x.id == sel.dataset.item), status = sel.value;
+  if (!it0) { toast("The list was just refreshed. Please try again."); return; }
   const { error } = await db.from("order_items").update({ item_status: status }).eq("id", it0.id);
-  if (error) { toast("Not saved: " + error.message); sel.value = it0.item_status; return; }
+  if (error) { toast("Not saved: " + error.message); sel.value = it0.item_status || "Pending"; return; }
   const it = items.find(x => x.id == it0.id) || it0; it.item_status = status;
   // read this order's items back from the database, so the order status is worked out from what is really saved
   const fresh = await db.from("order_items").select("id,item_status").eq("order_id", it.order_id);
@@ -1233,6 +1266,7 @@ const itemChange = async (e, sel) => {
   const st = items.filter(x => x.order_id === it.order_id).map(x => x.item_status || "Pending");
   const os = st.every(s => s === "Dispatched") ? "Dispatched" : st.every(s => s === "Done" || s === "Dispatched") ? "Completed" : st.some(s => s !== "Pending") ? "In Production" : "Pending";
   const o = orders.find(x => x.id === it.order_id);
+  if (!o) { await load(); return; }
   if (o.status !== os) {
     const now = new Date().toISOString(), fin = os === "Completed" || os === "Dispatched";
     const upd = { status: os, completed_at: fin ? (o.completed_at || now) : null, dispatched_at: os === "Dispatched" ? now : null };
@@ -1349,7 +1383,8 @@ $("dsave").onclick = async () => {
   const a = $("dact").value.trim(), h = $("dhold").value.trim(), n = $("dnote").value.trim();
   if (!a && !h && !n) { toast("Write an update first"); return; }
   const txt = [a && "Action: " + a, h && "Hold: " + h, n && "Note: " + n].filter(Boolean).join(" | ");
-  const { error } = await db.from("activity_log").insert({ order_id: updId, action: txt, done_by: me.name });
+  const dbtn = $("dsave"); if (dbtn.disabled) return; dbtn.disabled = true;
+  let error; try { ({ error } = await db.from("activity_log").insert({ order_id: updId, action: txt, done_by: me.name })); } finally { dbtn.disabled = false; }
   if (error) { toast("Not saved: " + error.message); return; }
   ["dact", "dhold", "dnote"].forEach(x => $(x).value = "");
   toast("Update saved"); loadLog(updId);
@@ -1373,7 +1408,7 @@ function addRow(d) {
   d = d || {};
   const tr = document.createElement("tr"); tr.className = "irow";
   if (d.id) tr.dataset.id = d.id;
-  tr.innerHTML = `<td data-l="Item description"><textarea class="d" rows="2" placeholder="Item name and details" aria-label="Item description"></textarea></td><td data-l="Micron (in words)"><input class="m" placeholder="e.g. Fifty" aria-label="Micron"></td><td data-l="Size"><textarea class="s" rows="2" placeholder="e.g. 48mm x 65m" aria-label="Size"></textarea></td><td data-l="Quantity"><input class="q" type="number" min="0" step="any" aria-label="Quantity"></td><td data-l="Unit"><select class="u" aria-label="Unit">${UNITS.map(u => `<option>${u}</option>`).join("")}</select></td><td class="rt" data-l="Rate per unit (optional)"><input class="r" type="number" min="0" step="any" placeholder="optional" aria-label="Rate per unit"></td><td><button type="button" class="alt" aria-label="Remove item">Remove</button></td>`;
+  tr.innerHTML = `<td data-l="Item description"><textarea class="d" rows="2" placeholder="Item name and details" aria-label="Item description"></textarea></td><td data-l="Micron (in words)"><input class="m" placeholder="e.g. Fifty" aria-label="Micron"></td><td data-l="Size"><textarea class="s" rows="2" placeholder="e.g. 48mm x 65m" aria-label="Size"></textarea></td><td data-l="Quantity"><input class="q" type="number" min="0" step="any" inputmode="decimal" aria-label="Quantity"></td><td data-l="Unit"><select class="u" aria-label="Unit">${UNITS.map(u => `<option>${u}</option>`).join("")}</select></td><td class="rt" data-l="Rate per unit (optional)"><input class="r" type="number" min="0" step="any" inputmode="decimal" placeholder="optional" aria-label="Rate per unit"></td><td><button type="button" class="alt" aria-label="Remove item">Remove</button></td>`;
   tr.querySelector(".d").value = d.item_description || "";
   tr.querySelector(".m").value = d.micron || "";
   tr.querySelector(".s").value = d.size || "";
@@ -1441,10 +1476,12 @@ function readRows() {
   return { rows: out, del };
 }
 
-async function autoPo() {            // short numbers: SO-0001, SO-0002 ...
-  try { const r = await db.rpc("next_order_no"); if (!r.error && r.data) return r.data; } catch (e) {}
-  const nums = orders.map(o => /^SO-(\d+)$/.exec(o.po_id || "")).filter(Boolean).map(m => +m[1]);
-  return "SO-" + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(4, "0");
+async function autoPo(bump) {         // short numbers: SO-0001, SO-0002 ...  (the server hands out each number once)
+  try { const r = await db.rpc("next_order_no"); if (!r.error && r.data) return r.data; if (r.error) console.warn("next_order_no failed:", r.error.message); } catch (e) {}
+  let seen = [];                                    // fallback only: ask the database too, not just this phone's list
+  try { const rr = await db.from("orders").select("po_id").like("po_id", "SO-%").limit(1000); if (!rr.error && rr.data) seen = rr.data.map(o => o.po_id); } catch (e) {}
+  const nums = seen.concat(orders.map(o => o.po_id)).map(x => /^SO-(\d+)/.exec(x || "")).filter(Boolean).map(m => +m[1]);
+  return "SO-" + String((nums.length ? Math.max(...nums) : 0) + 1 + (bump || 0)).padStart(4, "0");
 }
 // ---- reminder when an item has no rate ----
 function askMissingRate(list) {
@@ -1466,7 +1503,7 @@ function flagMissingRate() {                     // points the sales person to t
   if (boxes[0]) { boxes[0].scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(() => boxes[0].focus({ preventScroll: true }), 350); }
 }
 
-$("save").onclick = async () => {
+const doSave = async () => {
   const msg = $("nmsg"); msg.textContent = "";
   if (!canNew()) { toast("You can't create or edit orders"); return; }
   let po = $("po").value.trim(); const co = $("co").value.trim();
@@ -1475,36 +1512,72 @@ $("save").onclick = async () => {
   if (!co || !$("od").value) { msg.textContent = "Enter the company name and order date."; return; }
   if (!empName) { msg.textContent = "Select the sales person."; return; }
   if (!rows.length || rows.some(r => !r.item_description || !(Number(r.quantity) > 0))) { msg.textContent = "Each item needs a description and a quantity above 0."; return; }
+  if (rows.some(r => r.rate !== "" && !(Number(r.rate) >= 0))) { msg.textContent = "A rate cannot be negative."; return; }
   if (!editing && canRate()) {                       // new order with a missing rate: ask first, never force
     const miss = rows.filter(r => !(Number(r.rate) > 0));
     if (miss.length && !(await askMissingRate(miss))) { flagMissingRate(); return; }
   }
-  if (!po) { po = await autoPo(); $("po").value = po; }
+  const autoGen = !po;
+  if (!po && editing) { po = await autoPo(); $("po").value = po; }
   const person = people.find(p => p.name === empName);
   const salesPhone = me.role === "Sales" ? me.phone : (person ? person.phone : null);
   $("save").disabled = true;
   try {
     if (editing) await saveEdit(po, co, empName, salesPhone, rows, del);
-    else await saveNew(po, co, empName, salesPhone, rows);
+    else await saveNew(po, co, empName, salesPhone, rows, autoGen);
   } finally { $("save").disabled = false; }
 };
 
-async function saveNew(po, co, empName, salesPhone, rows) {
+let saving = false;
+$("save").onclick = async () => {
+  if (saving) return; saving = true; $("save").disabled = true;               // locked on the very first tap: a double tap can never place two orders
+  try { await doSave(); } finally { saving = false; $("save").disabled = false; }
+};
+
+async function saveNew(po, co, empName, salesPhone, rows, autoGen) {
   const msg = $("nmsg");
-  const dup = await db.from("orders").select("id").eq("po_id", po).limit(1);
-  if (!dup.error && dup.data && dup.data.length && !confirm(`An order with PO "${po}" already exists. Save another one anyway?`)) return;
-  const { data: o, error } = await db.from("orders").insert({
-    po_id: po, company_name: co, assigned_employee: empName, sales_phone: salesPhone || null, ...noteField(),
-    status: "Pending", order_date: $("od").value, delivery_date: $("dd").value || null
-  }).select().single();
+  const norm = r => (r.item_description || "").trim().toLowerCase() + "|" + Number(r.quantity);
+  try {                                             // the same order placed again within 20 minutes? (double tap, slow network, second device)
+    const rc = await db.from("orders").select("id,po_id,created_at").eq("company_name", co).eq("assigned_employee", empName).gte("created_at", new Date(Date.now() - 20 * 60000).toISOString()).order("created_at", { ascending: false }).limit(5);
+    if (!rc.error && rc.data && rc.data.length) {
+      const mine = rows.map(norm).sort().join(";");
+      for (const x of rc.data) {
+        const ri = await db.from("order_items").select("item_description,quantity").eq("order_id", x.id);
+        if (!ri.error && (ri.data || []).map(norm).sort().join(";") === mine) {
+          const t0 = new Date(x.created_at).getTime(), ago = isNaN(t0) ? "just now" : Math.max(1, Math.round((Date.now() - t0) / 60000)) + " min ago";
+          if (!confirm(`This looks like the same order that was already placed ${ago} (${x.po_id}).\n\nPlace it again?`)) return;
+          break;
+        }
+      }
+    }
+  } catch (_) {}
+  if (!autoGen) {
+    const dup = po && await db.from("orders").select("po_id").ilike("po_id", po.replace(/[%_\\]/g, m => "\\" + m)).limit(1);
+    if (dup && !dup.error && dup.data && dup.data.length && !confirm(`An order with PO "${dup.data[0].po_id}" already exists.\n\nSave another one with the same PO anyway?`)) return;
+  }
+  if (!po) { po = await autoPo(); $("po").value = po; }       // a new number is taken only now, after every check has passed
+  let o = null, error = null;
+  for (let n = 0; n < 4; n++) {                     // if the number was taken in the meantime, take the next one automatically
+    ({ data: o, error } = await db.from("orders").insert({
+      po_id: po, company_name: co, assigned_employee: empName, sales_phone: salesPhone || null, ...noteField(),
+      status: "Pending", order_date: $("od").value, delivery_date: $("dd").value || null
+    }).select().single());
+    if (error && autoGen && (error.code === "23505" || /duplicate key|unique/i.test(error.message))) { po = await autoPo(n + 1); $("po").value = po; continue; }
+    break;
+  }
   if (error) {
+    if (error.code === "23505" || /duplicate key|unique/i.test(error.message)) { msg.textContent = `Order not saved: PO "${po}" is already used. Change the PO number (for example add a letter) and save again.`; return; }
     msg.textContent = /row-level security|jwt|permission/i.test(error.message)
       ? "Order not saved: your sign-in could not be confirmed just now. Press the refresh button at the top, then Save order again. If it keeps happening, sign out and sign in once. (" + (me.name || "") + " \u00b7 " + (me.role || "") + ")"
       : "Order not saved: " + error.message;
     return;
   }
   const r2 = await db.from("order_items").insert(rows.map(r => ({ item_description: r.item_description, micron: r.micron, size: r.size, unit: r.unit, quantity: Number(r.quantity), ...rateField(r), item_status: "Pending", order_id: o.id })));
-  if (r2.error) { msg.textContent = "Order saved but items failed: " + r2.error.message + ". Ask Management to delete order " + po + " and enter it again."; await load(); return; }
+  if (r2.error) {
+    const rb = await db.from("orders").delete().eq("id", o.id);                    // do not leave an empty order behind
+    msg.textContent = rb.error ? "Order saved but items failed: " + r2.error.message + ". Ask Management to delete order " + po + " and enter it again." : "Order not saved (items failed: " + r2.error.message + "). Nothing was kept, please press Save order again.";
+    await load(); return;
+  }
   await db.from("activity_log").insert({ order_id: o.id, action: "Order created", done_by: me.name });
   resetForm(); toast("Order saved"); await load(); show("orders");
 }
@@ -1740,7 +1813,7 @@ window.addEventListener("paste", e => {
   handleFile(f);
 });
 
-// Data loads when you sign in and when you press the refresh button (or after you save something). Nothing reloads by itself.
+// Data loads when you sign in, when you press refresh, after you save something, and quietly every 2 minutes (see the end of this file).
 
 
 // ---- Management: email the pending list now (the daily email uses the same function) ----
@@ -1820,7 +1893,7 @@ let chartCnt = {};
 function renderChart() {
   const card = $("chartcard"); if (!card) return;
   const R = 52, C = 2 * Math.PI * R;
-  if (!chartDay) chartDay = today();
+  const td0 = today(); if (!chartDay || (renderChart.td && chartDay === renderChart.td && renderChart.td !== td0)) chartDay = td0; renderChart.td = td0;
   if (!chartBuilt) {
     $("dsvg").innerHTML = `<circle class="ring-bg" cx="75" cy="75" r="${R}"/>` + CH.map(c => `<circle class="seg" data-s="${c[0]}" cx="75" cy="75" r="${R}" stroke="${c[1]}" style="stroke-dasharray:0 ${C};stroke-dashoffset:0;stroke-linecap:butt" transform="rotate(-90 75 75)"/>`).join("");
     $("dsvg").addEventListener("mouseover", e => { const g = e.target.closest(".seg"); if (g) chartHover(g.dataset.s, chartCnt); });
